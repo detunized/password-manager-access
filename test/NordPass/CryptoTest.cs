@@ -45,7 +45,7 @@ public class CryptoTest
         var key = new byte[32];
 
         // Act/Assert
-        Should.Throw<CryptoException>(() => Crypto.DecryptXChaCha20Poly1305(ciphertext, key));
+        Should.Throw<InternalErrorException>(() => Crypto.DecryptXChaCha20Poly1305(ciphertext, key));
     }
 
     [Fact]

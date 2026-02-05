@@ -2,10 +2,10 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Numerics;
 using Konscious.Security.Cryptography;
 using NaCl;
 using Org.BouncyCastle.Crypto.Digests;
-using Org.BouncyCastle.Math;
 using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.NordPass;
@@ -79,28 +79,22 @@ internal static class Crypto
         // Decode y-coordinate from the Ed25519 public key (little-endian, top bit is sign of x)
         var yBytes = (byte[])ed25519PublicKey.Clone();
         yBytes[31] &= 0x7F;
-        Array.Reverse(yBytes); // to big-endian for BigInteger
-        var y = new BigInteger(1, yBytes);
+        var y = new BigInteger(yBytes, isUnsigned: true, isBigEndian: false);
 
-        // u = (1 + y) * (1 - y)^(-1) mod p
-        var numerator = BigInteger.One.Add(y).Mod(P);
-        var denominator = BigInteger.One.Subtract(y).Mod(P);
-        var u = numerator.Multiply(denominator.ModInverse(P)).Mod(P);
+        // u = (1 + y) * (1 - y)^(-1) mod p  (Fermat's little theorem: a^(-1) = a^(p-2) mod p)
+        var numerator = (1 + y) % P;
+        var denominator = (P + 1 - y) % P;
+        var u = numerator * BigInteger.ModPow(denominator, P - 2, P) % P;
 
         // Encode u as 32 bytes little-endian
-        var uBytes = u.ToByteArrayUnsigned();
-        Array.Reverse(uBytes);
         var result = new byte[32];
-        Buffer.BlockCopy(uBytes, 0, result, 0, Math.Min(uBytes.Length, 32));
+        u.TryWriteBytes(result, out _, isUnsigned: true, isBigEndian: false);
         return result;
     }
 
     //
     // Internal
     //
-
-    // p = 2^255 - 19
-    private static readonly BigInteger P = BigInteger.One.ShiftLeft(255).Subtract(BigInteger.ValueOf(19));
 
     internal static byte[] Blake2b(int outputLength, byte[] a, byte[] b)
     {
@@ -111,4 +105,11 @@ internal static class Crypto
         digest.DoFinal(output, 0);
         return output;
     }
+
+    //
+    // Data
+    //
+
+    // p = 2^255 - 19
+    internal static readonly BigInteger P = (BigInteger.One << 255) - 19;
 }
