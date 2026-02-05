@@ -1,0 +1,86 @@
+{
+  "timestamp": "2026-02-05T21:17:12.215Z",
+  "email": "lastpass.ruby+23-january-2026@gmail.com",
+  "items": [
+    {
+      "item_id": "668e6772-c7b3-4c5d-8a69-20aca43ebed5",
+      "type": "folder",
+      "value": {
+        "type": "folder",
+        "value": "{\"secret_version\":\"2026-02-05 16:49:30\",\"creation_type\":\"import-csv\",\"type\":\"folder\",\"uuid\":\"668e6772-c7b3-4c5d-8a69-20aca43ebed5\",\"changed_at\":\"2026-02-05 16:49:30\",\"title\":\"Development\"}"
+      }
+    },
+    {
+      "item_id": "10a442bd-6988-4fdb-b2f5-187008f56b6e",
+      "type": "folder",
+      "value": {
+        "type": "folder",
+        "value": "{\"secret_version\":\"2026-02-05 16:49:30\",\"creation_type\":\"import-csv\",\"type\":\"folder\",\"uuid\":\"10a442bd-6988-4fdb-b2f5-187008f56b6e\",\"changed_at\":\"2026-02-05 16:49:30\",\"title\":\"Shopping\"}"
+      }
+    },
+    {
+      "item_id": "3674e7b6-27d0-437c-a0cc-9fa62a514380",
+      "type": "folder",
+      "value": {
+        "type": "folder",
+        "value": "{\"secret_version\":\"2026-02-05 16:49:30\",\"creation_type\":\"import-csv\",\"type\":\"folder\",\"uuid\":\"3674e7b6-27d0-437c-a0cc-9fa62a514380\",\"changed_at\":\"2026-02-05 16:49:30\",\"title\":\"Entertainment\"}"
+      }
+    },
+    {
+      "item_id": "b7bf7c44-d1cf-4fc1-b13d-27e96f47e9a0",
+      "type": "folder",
+      "value": {
+        "type": "folder",
+        "value": "{\"secret_version\":\"2026-02-05 16:49:30\",\"creation_type\":\"import-csv\",\"type\":\"folder\",\"uuid\":\"b7bf7c44-d1cf-4fc1-b13d-27e96f47e9a0\",\"changed_at\":\"2026-02-05 16:49:30\",\"title\":\"Finance\"}"
+      }
+    },
+    {
+      "item_id": "29c8802b-dc3a-4b27-92cf-6a06e8aff0b3",
+      "type": "item",
+      "value": {
+        "type": "password",
+        "value": "{\"secret\":\"minpass123\",\"secret_version\":\"2026-02-05 16:49:30\",\"note\":\"\",\"creation_type\":\"import-csv\",\"type\":\"password\",\"uuid\":\"29c8802b-dc3a-4b27-92cf-6a06e8aff0b3\",\"changed_at\":\"2026-02-05 16:49:30\",\"title\":\"Minimal Entry\",\"username\":\"minuser\",\"url\":\"https://minimal.example.com\"}"
+      }
+    },
+    {
+      "item_id": "dcc6f1d7-59af-4578-b768-9eef55414b51",
+      "type": "item",
+      "value": {
+        "type": "password",
+        "value": "{\"secret\":\"blah blah\",\"secret_version\":\"2026-01-23 18:04:44\",\"note\":\"blah blah blah\",\"creation_type\":\"manual\",\"type\":\"password\",\"uuid\":\"dcc6f1d7-59af-4578-b768-9eef55414b51\",\"changed_at\":\"2026-01-23 18:04:44\",\"title\":\"Blah!\",\"username\":\"blah\",\"url\":\"https://blah.com\",\"additional_urls\":[]}"
+      }
+    },
+    {
+      "item_id": "0c8638e1-4961-4622-a50b-e72e17058910",
+      "type": "option",
+      "value": {
+        "applied_migrations": [],
+        "promotions": {},
+        "auto_lock": {
+          "desktop": -1
+        },
+        "exact_match_domains": [],
+        "autofill_controls": {
+          "general": {
+            "credit_card": true,
+            "identity": true,
+            "login": true,
+            "instant_login": true,
+            "password_generate": true,
+            "icon_show_type": "allFields"
+          },
+          "websites": {}
+        },
+        "autosave_controls": {
+          "general": {
+            "credit_card": true,
+            "identity": true,
+            "login": true,
+            "passkeys": true
+          },
+          "websites": {}
+        }
+      }
+    }
+  ]
+}
