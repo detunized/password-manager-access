@@ -14,4 +14,12 @@ internal static class Client
         var decrypted = Crypto.DecryptXChaCha20Poly1305(encryptedPrivateKey, masterKey);
         return decrypted.ToUtf8().Decode64();
     }
+
+    // Decrypts the item private key using the identity X25519 keypair (sealed box).
+    // Returns the raw Ed25519 keypair (64 bytes: 32-byte seed + 32-byte public key).
+    internal static byte[] DecryptItemKey(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, byte[] encryptedItemPrivateKey)
+    {
+        var decrypted = Crypto.DecryptSealedBox(encryptedItemPrivateKey, identityX25519PublicKey, identityX25519PrivateKey);
+        return decrypted.ToUtf8().Decode64();
+    }
 }
