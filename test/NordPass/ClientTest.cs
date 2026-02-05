@@ -1,14 +1,17 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System.Linq;
+using System.Text.Json;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.NordPass;
 using Shouldly;
 using Xunit;
+using Crypto = PasswordManagerAccess.NordPass.Crypto;
 
 namespace PasswordManagerAccess.Test.NordPass;
 
-public class ClientTest
+public class ClientTest : TestBase
 {
     [Fact]
     public void DecryptIdentityKey_returns_ed25519_keypair()
@@ -69,6 +72,28 @@ public class ClientTest
 
         // Assert
         json.ShouldContain(""""type":"password"""");
+    }
+
+    [Fact]
+    public void DecryptVaultItem_returns_account()
+    {
+        // Arrange
+        var vault = JsonSerializer.Deserialize<Model.Vault>(GetFixture("vault"));
+        var identityEd25519Key = Client.DecryptIdentityKey(MasterKey.Decode64(), vault!.Identities[0].Keys[0].EncryptedPrivateKey.Decode64());
+        var x25519Public = Crypto.Ed25519ToX25519Public(identityEd25519Key[32..]);
+        var x25519Private = Crypto.Ed25519ToX25519Private(identityEd25519Key);
+        var blahItem = vault.VaultItems.First(i => i.ItemId == "dcc6f1d7-59af-4578-b768-9eef55414b51");
+
+        // Act
+        var account = Client.DecryptVaultItem(x25519Public, x25519Private, blahItem);
+
+        // Assert
+        account.Id.ShouldBe("dcc6f1d7-59af-4578-b768-9eef55414b51");
+        account.Name.ShouldBe("Blah!");
+        account.Username.ShouldBe("blah");
+        account.Password.ShouldBe("blah blah");
+        account.Url.ShouldBe("https://blah.com");
+        account.Note.ShouldBe("blah blah blah");
     }
 
     //

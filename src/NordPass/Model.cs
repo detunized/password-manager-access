@@ -91,7 +91,17 @@ internal static class Model
         public required string DekInfo { get; init; }
     }
 
-    // Decrypted vault item value (inner JSON)
+    // Outer wrapper for decrypted item value: {"type":"password","value":"{...}"}
+    public record DecryptedValueWrapper
+    {
+        [JsonPropertyName("type")]
+        public required string Type { get; init; }
+
+        [JsonPropertyName("value")]
+        public required string Value { get; init; }
+    }
+
+    // Inner JSON from the value field
     public record DecryptedValue
     {
         [JsonPropertyName("type")]
