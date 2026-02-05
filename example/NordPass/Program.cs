@@ -22,13 +22,13 @@ static class Program
             {
                 var a = vault.Accounts[i];
                 Console.WriteLine(
-                    "{0}:\n" +
-                    "          id: {1}\n" +
-                    "        name: {2}\n" +
-                    "    username: {3}\n" +
-                    "    password: {4}\n" +
-                    "         url: {5}\n" +
-                    "        note: {6}\n",
+                    "{0}:\n"
+                        + "          id: {1}\n"
+                        + "        name: {2}\n"
+                        + "    username: {3}\n"
+                        + "    password: {4}\n"
+                        + "         url: {5}\n"
+                        + "        note: {6}\n",
                     i + 1,
                     a.Id,
                     a.Name,
