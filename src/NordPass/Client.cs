@@ -102,6 +102,45 @@ internal static class Client
     }
 
     //
+    // Data fetching
+    //
+
+    internal static async Task<Model.Identity[]> FetchIdentities(RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.GetAsync<Model.Identity[]>("v2/users/identities", cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data;
+    }
+
+    internal static async Task<Model.VaultItem[]> FetchVaultItems(string identityId, RestClient rest, CancellationToken cancellationToken)
+    {
+        var items = new List<Model.VaultItem>();
+        var page = 1;
+
+        while (true)
+        {
+            var response = await rest.GetAsync<Model.VaultItemsResponse>(
+                    $"v2/users/identities/items?identity_id={identityId}&type%5B%5D=item&type%5B%5D=folder&type%5B%5D=option&page={page}",
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
+
+            if (!response.IsSuccessful)
+                throw MakeError(response);
+
+            if (response.Data.Items.Length == 0)
+                break;
+
+            items.AddRange(response.Data.Items);
+            page++;
+        }
+
+        return items.ToArray();
+    }
+
+    //
     // Decryption
     //
 
