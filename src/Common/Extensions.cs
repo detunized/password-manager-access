@@ -2,6 +2,8 @@
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
 using System;
+using System.Buffers;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -299,6 +301,15 @@ namespace PasswordManagerAccess.Common
         public static string ToUtf8(this byte[] x)
         {
             return Encoding.UTF8.GetString(x);
+        }
+
+        // Decodes base64 directly from UTF-8 bytes without intermediate string allocation
+        public static byte[] Decode64(this byte[] x)
+        {
+            var result = new byte[Base64.GetMaxDecodedFromUtf8Length(x.Length)];
+            return Base64.DecodeFromUtf8(x, result, out _, out var bytesWritten) == OperationStatus.Done
+                ? result[..bytesWritten]
+                : throw new InternalErrorException("Failed to decode base64");
         }
 
         public static string ToHex(this byte[] x)

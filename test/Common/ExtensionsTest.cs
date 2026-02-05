@@ -355,6 +355,16 @@ namespace PasswordManagerAccess.Test.Common
             Assert.Equal(TestString, TestBytes.ToUtf8());
         }
 
+        [Theory]
+        [InlineData(new byte[] { }, "")]
+        [InlineData(new byte[] { 0xFB }, "+w==")]
+        [InlineData(new byte[] { 0xFB, 0xEF }, "++8=")]
+        [InlineData(new byte[] { 0xFB, 0xEF, 0xFF }, "++//")]
+        public void ByteArray_Decode64_decodes_base64(byte[] expected, string base64)
+        {
+            Encoding.UTF8.GetBytes(base64).Decode64().ShouldBe(expected);
+        }
+
         [Fact]
         public void ByteArray_ToHex_returns_hex_string()
         {
