@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,9 +11,92 @@ using PasswordManagerAccess.Common;
 
 namespace PasswordManagerAccess.NordPass;
 
-internal static class Client
+public static class Client
 {
     public const string ApiBase = "https://api.nordpass.com";
+
+    public static async Task<Vault> OpenVault(string email, string masterPassword, IAsyncUi ui, CancellationToken cancellationToken)
+    {
+        using var transport = new RestTransport();
+        return await OpenVault(email, masterPassword, ui, transport, cancellationToken).ConfigureAwait(false);
+    }
+
+    //
+    // Internal
+    //
+
+    internal static async Task<Vault> OpenVault(
+        string email,
+        string masterPassword,
+        IAsyncUi ui,
+        IRestTransport transport,
+        CancellationToken cancellationToken
+    )
+    {
+        var rest = MakeRestClient(transport);
+
+        // 1. OAuth login
+        var (verifier, challenge) = GeneratePkce();
+        var deviceId = Common.Crypto.Sha256(Guid.NewGuid().ToByteArray()).ToHex();
+        var login = await InitiateOAuthLogin(email, deviceId, challenge, rest, cancellationToken).ConfigureAwait(false);
+
+        // 2. Browser-based authentication
+        var verifyToken = await ui.AuthorizeOAuth(login.RedirectUrl, cancellationToken).ConfigureAwait(false);
+        if (verifyToken == null)
+            throw new CanceledMultiFactorException("OAuth authorization was canceled by the user");
+
+        // 3. Exchange token
+        var accessToken = await ExchangeToken(verifyToken, login.AttemptId, verifier, rest, cancellationToken).ConfigureAwait(false);
+        rest.AddOrUpdateHeader("Authorization", $"Bearer {accessToken}");
+
+        // 4. Fetch identities and derive master key
+        var identities = await FetchIdentities(rest, cancellationToken).ConfigureAwait(false);
+        if (identities.Length == 0)
+            throw new InternalErrorException("No identities found");
+
+        var identity = identities[0];
+        if (identity.Keys.Length == 0)
+            throw new InternalErrorException("No identity keys found");
+
+        var identityKey = identity.Keys[0];
+
+        // 5. Fetch and decrypt vault items
+        var items = await FetchVaultItems(identity.IdentityId, rest, cancellationToken).ConfigureAwait(false);
+
+        return DecryptVault(masterPassword, identityKey, items);
+    }
+
+    internal static Vault DecryptVault(string masterPassword, Model.IdentityKey identityKey, Model.VaultItem[] items)
+    {
+        var salt = identityKey.Salt.Decode64();
+        var masterKey = Crypto.DeriveKey(masterPassword, salt);
+        var identityEd25519Key = DecryptIdentityKey(masterKey, identityKey.EncryptedPrivateKey.Decode64());
+        var x25519Public = Crypto.Ed25519ToX25519Public(identityEd25519Key[32..]);
+        var x25519Private = Crypto.Ed25519ToX25519Private(identityEd25519Key);
+
+        // Decrypt folder keys (items inside folders are sealed with the folder's key)
+        var folderKeys = new Dictionary<string, (byte[] Public, byte[] Private)>();
+        foreach (var folder in items.Where(i => i.Type == "folder"))
+        {
+            var folderEd25519Key = DecryptItemKey(x25519Public, x25519Private, folder.ItemKey.EncryptedItemPrivateKey.Decode64());
+            var folderX25519Public = Crypto.Ed25519ToX25519Public(folderEd25519Key[32..]);
+            var folderX25519Private = Crypto.Ed25519ToX25519Private(folderEd25519Key);
+            folderKeys[folder.ItemId] = (folderX25519Public, folderX25519Private);
+        }
+
+        var accounts = items
+            .Where(i => i.Type == "item")
+            .Select(i =>
+            {
+                var folderId = i.ItemKey.FolderId;
+                if (folderId != null && folderKeys.TryGetValue(folderId, out var fk))
+                    return DecryptVaultItem(fk.Public, fk.Private, i);
+                return DecryptVaultItem(x25519Public, x25519Private, i);
+            })
+            .ToArray();
+
+        return new Vault(accounts);
+    }
 
     internal static readonly Dictionary<string, string> DefaultHeaders = new() { ["nordpass-user-agent"] = "NordPass webvault (7.3.14) webvault" };
 

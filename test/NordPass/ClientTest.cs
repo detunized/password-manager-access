@@ -71,35 +71,52 @@ public class ClientTest : TestBase
         var json = Client.DecryptItemValue(valueKey, encryptedValue);
 
         // Assert
-        json.ShouldContain(""""type":"password"""");
+        json.ShouldContain("""type":"password""");
     }
 
     [Fact]
-    public void DecryptVaultItem_returns_account()
+    public void DeriveKey_from_password_matches_expected_master_key()
     {
         // Arrange
-        var vault = JsonSerializer.Deserialize<Model.Vault>(GetFixture("vault"));
-        var identityEd25519Key = Client.DecryptIdentityKey(MasterKey.Decode64(), vault!.Identities[0].Keys[0].EncryptedPrivateKey.Decode64());
-        var x25519Public = Crypto.Ed25519ToX25519Public(identityEd25519Key[32..]);
-        var x25519Private = Crypto.Ed25519ToX25519Private(identityEd25519Key);
-        var blahItem = vault.VaultItems.First(i => i.ItemId == "dcc6f1d7-59af-4578-b768-9eef55414b51");
+        var vault = JsonSerializer.Deserialize<Model.Vault>(GetFixture("vault"))!;
+        var salt = vault.Identities[0].Keys[0].Salt.Decode64();
 
         // Act
-        var account = Client.DecryptVaultItem(x25519Public, x25519Private, blahItem);
+        var masterKey = Crypto.DeriveKey(MasterPassword, salt);
 
         // Assert
-        account.Id.ShouldBe("dcc6f1d7-59af-4578-b768-9eef55414b51");
-        account.Name.ShouldBe("Blah!");
-        account.Username.ShouldBe("blah");
-        account.Password.ShouldBe("blah blah");
-        account.Url.ShouldBe("https://blah.com");
-        account.Note.ShouldBe("blah blah blah");
+        masterKey.ShouldBe(MasterKey.Decode64());
+    }
+
+    [Fact]
+    public void DecryptVault_decrypts_all_items()
+    {
+        // Arrange
+        var fixture = JsonSerializer.Deserialize<Model.Vault>(GetFixture("vault"))!;
+
+        // Act
+        var vault = Client.DecryptVault(MasterPassword, fixture.Identities[0].Keys[0], fixture.VaultItems);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+
+        var blah = vault.Accounts.First(a => a.Name == "Blah!");
+        blah.Username.ShouldBe("blah");
+        blah.Password.ShouldBe("blah blah");
+        blah.Url.ShouldBe("https://blah.com");
+        blah.Note.ShouldBe("blah blah blah");
+
+        var minimal = vault.Accounts.First(a => a.Name == "Minimal Entry");
+        minimal.Username.ShouldBe("minuser");
+        minimal.Password.ShouldBe("minpass123");
+        minimal.Url.ShouldBe("https://minimal.example.com");
     }
 
     //
     // Data
     //
 
+    private const string MasterPassword = "what's a master password?";
     private const string MasterKey = "wn/y0bj/U3y6rIguIWbCzUIisU8c+DYgIW65qvjwFWE=";
     private const string EncryptedIdentityPrivateKey =
         "nLGaxSYRDyv0FAJN1/72CMkecGqRLXzjshj89er3huZCwrYt68qqCUlEJv7xU9xsg5JdWUarma7OLZ5UpAwQc9bV9BnGnoYPMJYfrR2kaOxtknRupZ6q59iqbbkTLhNT0t535Sj3p8p4bkuc8OLz3k6ME/2HtqR2iCT7dbbYAZw=";

@@ -3,22 +3,4 @@
 
 namespace PasswordManagerAccess.NordPass;
 
-public class Vault
-{
-    public Account[] Accounts { get; }
-
-    public static Vault Open(string username, string password)
-    {
-        // TODO: Implement
-        return new Vault([]);
-    }
-
-    //
-    // Private
-    //
-
-    private Vault(Account[] accounts)
-    {
-        Accounts = accounts;
-    }
-}
+public record Vault(Account[] Accounts);

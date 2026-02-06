@@ -31,11 +31,14 @@ internal static class Model
         [JsonPropertyName("token")]
         public required string Token { get; init; }
 
-        [JsonPropertyName("type")]
-        public required string Type { get; init; }
+        [JsonPropertyName("expires_at")]
+        public string? ExpiresAt { get; init; }
 
-        [JsonPropertyName("expires_in")]
-        public int ExpiresIn { get; init; }
+        [JsonPropertyName("renew_token")]
+        public string? RenewToken { get; init; }
+
+        [JsonPropertyName("renew_expires_at")]
+        public string? RenewExpiresAt { get; init; }
     }
 
     // Vault fixture (for testing)
@@ -119,6 +122,9 @@ internal static class Model
 
         [JsonPropertyName("dek_info")]
         public required string DekInfo { get; init; }
+
+        [JsonPropertyName("folder_id")]
+        public string? FolderId { get; init; }
     }
 
     // Outer wrapper for decrypted item value: {"type":"password","value":"{...}"}
