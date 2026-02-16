@@ -10,6 +10,9 @@ namespace NordPassAvalonia;
 
 public partial class App : Application
 {
+    // When this is enabled, no state is preserved and every login is like a fresh one. Will ask for password and all.
+    private const bool UsePrivateMode = false;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -18,7 +21,7 @@ public partial class App : Application
     public override void RegisterServices()
     {
         base.RegisterServices();
-        AvaloniaWebViewBuilder.Initialize(default);
+        AvaloniaWebViewBuilder.Initialize(p => p.IsInPrivateModeEnabled = UsePrivateMode);
     }
 
     public override void OnFrameworkInitializationCompleted()
