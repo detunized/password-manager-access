@@ -1,5 +1,8 @@
 # Changelog
 
+## 31.0.1
+  - Duo: fixed a crash in Duo v4 when the server response is missing device data
+
 ## 31.0.0
   - Bitwarden: added support for secure storage to store session tokens to be able to resume
     previous sessions
