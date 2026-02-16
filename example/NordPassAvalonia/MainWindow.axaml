@@ -16,7 +16,7 @@
         </StackPanel>
 
         <!-- WebView for OAuth -->
-        <WebView x:Name="AuthWebView" Grid.Row="1" />
+        <WebView x:Name="AuthWebView" Grid.Row="1" IsVisible="False" />
 
         <!-- Status -->
         <TextBlock x:Name="StatusText" Grid.Row="2" Margin="10" Foreground="Teal" TextWrapping="Wrap" />

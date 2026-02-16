@@ -59,6 +59,7 @@ public partial class MainWindow : Window, IAsyncUi
     {
         _authTcs = new TaskCompletionSource<string?>();
 
+        AuthWebView.IsVisible = true;
         AuthWebView.NavigationStarting += OnNavigationStarting;
         AuthWebView.Url = new Uri(url);
 
@@ -80,6 +81,8 @@ public partial class MainWindow : Window, IAsyncUi
         if (!string.IsNullOrEmpty(token))
         {
             AuthWebView.NavigationStarting -= OnNavigationStarting;
+            AuthWebView.Url = new Uri("about:blank");
+            AuthWebView.IsVisible = false;
             _authTcs?.TrySetResult(token);
         }
     }
