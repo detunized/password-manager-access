@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NordPassAvalonia.MainWindow"
+        Title="NordPass" Width="900" Height="700">
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Login form -->
+        <StackPanel Spacing="5" Margin="10">
+            <TextBlock>Username</TextBlock>
+            <TextBox x:Name="UsernameBox" />
+
+            <TextBlock>Master Password</TextBlock>
+            <TextBox x:Name="PasswordBox" PasswordChar="*" />
+
+            <Button x:Name="LoginButton" Click="Login_Click">Login</Button>
+        </StackPanel>
+
+        <!-- WebView for OAuth -->
+        <WebView x:Name="AuthWebView" Grid.Row="1" />
+
+        <!-- Status -->
+        <TextBlock x:Name="StatusText" Grid.Row="2" Margin="10" Foreground="Teal" TextWrapping="Wrap" />
+
+    </Grid>
+</Window>
