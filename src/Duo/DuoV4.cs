@@ -208,15 +208,16 @@ namespace PasswordManagerAccess.Duo
 
         internal static DuoDevice[] ParseDeviceData(R.Data data)
         {
-            if (data.Phones == null)
+            if (data.Phones == null || data.Methods == null)
                 return [];
 
-            return data.Phones.Select(x => new DuoDevice(x.Id, x.Name, GetDeviceFactors(x.Key, data.Methods))).ToArray();
+            return data.Phones.Where(x => x != null).Select(x => new DuoDevice(x.Id, x.Name, GetDeviceFactors(x.Key, data.Methods))).ToArray();
         }
 
         internal static DuoFactor[] GetDeviceFactors(string key, R.Method[] methods)
         {
             return methods
+                .Where(x => x != null)
                 .Where(x => x.DeviceKey == key || x.DeviceKey.IsNullOrEmpty())
                 .Where(x => StringToFactor.ContainsKey(x.Factor))
                 .Select(x => StringToFactor[x.Factor])
