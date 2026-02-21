@@ -117,6 +117,177 @@ public class ClientTest : TestBase
     }
 
     //
+    // OpenVault
+    //
+
+    [Fact]
+    public async Task OpenVault_with_valid_access_token_skips_oauth()
+    {
+        // Arrange
+        var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
+        var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task OpenVault_with_expired_access_token_and_valid_refresh_token_refreshes()
+    {
+        // Arrange
+        var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: true);
+        var flow = new RestFlow { UseSystemJson = true }
+            .Post(GetFixture("oauth-token")) // refresh
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task OpenVault_with_expired_access_token_and_failed_refresh_falls_through_to_oauth()
+    {
+        // Arrange
+        var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: true);
+        var flow = new RestFlow { UseSystemJson = true }
+            .Post("", HttpStatusCode.Unauthorized) // refresh fails
+            .Get("", HttpStatusCode.Unauthorized) // GetVault after failed refresh returns 401
+            .Post(GetFixture("oauth-login")) // full OAuth
+            .Post(GetFixture("oauth-token"))
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task OpenVault_with_valid_access_token_rejected_by_server_tries_refresh()
+    {
+        // Arrange
+        var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
+        var flow = new RestFlow { UseSystemJson = true }
+            .Get("", HttpStatusCode.Unauthorized) // access token rejected
+            .Post(GetFixture("oauth-token")) // refresh succeeds
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task OpenVault_with_no_stored_auth_does_full_oauth()
+    {
+        // Arrange
+        var storage = new MemoryStorage();
+        var flow = new RestFlow { UseSystemJson = true }
+            .Post(GetFixture("oauth-login"))
+            .Post(GetFixture("oauth-token"))
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task OpenVault_with_no_stored_auth_stores_tokens_after_oauth()
+    {
+        // Arrange
+        var storage = new MemoryStorage();
+        var flow = new RestFlow { UseSystemJson = true }
+            .Post(GetFixture("oauth-login"))
+            .Post(GetFixture("oauth-token"))
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        storage.Values.ShouldContainKey("auth");
+    }
+
+    [Fact]
+    public async Task OpenVault_with_all_tokens_expired_does_full_oauth()
+    {
+        // Arrange
+        var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: false);
+        var flow = new RestFlow { UseSystemJson = true }
+            .Post(GetFixture("oauth-login"))
+            .Post(GetFixture("oauth-token"))
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task OpenVault_throws_when_user_cancels_oauth()
+    {
+        // Arrange
+        var storage = new MemoryStorage();
+        var flow = new RestFlow { UseSystemJson = true }.Post(GetFixture("oauth-login"));
+
+        // Act/Assert
+        await Should.ThrowAsync<CanceledMultiFactorException>(
+            () => Client.OpenVault(Email, MasterPassword, new CancelUi(), storage, flow, CancellationToken.None)
+        );
+    }
+
+    [Fact]
+    public async Task OpenVault_with_valid_access_token_rejected_and_refresh_rejected_falls_through_to_oauth()
+    {
+        // Arrange
+        var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
+        var flow = new RestFlow { UseSystemJson = true }
+            .Get("", HttpStatusCode.Unauthorized) // access token rejected
+            .Post("", HttpStatusCode.Unauthorized) // refresh also fails
+            .Get("", HttpStatusCode.Unauthorized) // GetVault after failed refresh returns 401
+            .Post(GetFixture("oauth-login")) // full OAuth
+            .Post(GetFixture("oauth-token"))
+            .Get(GetFixture("identities"))
+            .Get(GetFixture("vault-items-page-1"))
+            .Get(GetFixture("vault-items-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+    }
+
+    //
     // FetchIdentities
     //
 
@@ -234,6 +405,37 @@ public class ClientTest : TestBase
     {
         // Act/Assert
         Should.Throw<InternalErrorException>(() => Client.ParseNordPassDateTime(input));
+    }
+
+    //
+    // Helpers
+    //
+
+    private const string Email = "test@example.com";
+
+    private static async Task<MemoryStorage> MakeStorageWithAuth(bool accessTokenValid, bool refreshTokenValid)
+    {
+        var storage = new MemoryStorage();
+        var now = DateTime.UtcNow;
+        var auth = new
+        {
+            accessToken = "access-token",
+            expiresAt = accessTokenValid ? now.AddHours(1) : now.AddHours(-1),
+            refreshToken = "refresh-token",
+            refreshExpiresAt = refreshTokenValid ? now.AddDays(30) : now.AddDays(-1),
+        };
+        await ((IAsyncSecureStorage)storage).StoreString("auth", JsonSerializer.Serialize(auth), CancellationToken.None);
+        return storage;
+    }
+
+    private class SuccessUi : IAsyncUi
+    {
+        public Task<string?> AuthorizeOAuth(string url, CancellationToken cancellationToken) => Task.FromResult<string?>("verify-token");
+    }
+
+    private class CancelUi : IAsyncUi
+    {
+        public Task<string?> AuthorizeOAuth(string url, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
     }
 
     //

@@ -1,0 +1,11 @@
+{
+  "redirect_url": "https://api.nordpass.com/v1/users/oauth/login-redirect?attempt=47965ec0-926b-4736-a006-c8c111a61255&dark_mode=0",
+  "attempt_id": "47965ec0-926b-4736-a006-c8c111a61255",
+  "nc_token": {
+    "endpoint": "tcps://nc-unit1-mqtt-k8s.nordpass.com:8884",
+    "username": "2089b6b337897c909a699bd8cc19b05cc0215924855f2e0c418fad217067a21372d60b51bdb12fc7d08a183ea1021a07f679535cb7a0b8e19106bd26d94942c1",
+    "password": "600**47g6N2kvTA5IXfRLQopDzKwZu30n91M8",
+    "expires_in": 86400,
+    "client_id": "2f8ec5e195d9bffcaf52e039b490f8e323c2a05b16cd62bdb3c3e5103a61d586"
+  }
+}
