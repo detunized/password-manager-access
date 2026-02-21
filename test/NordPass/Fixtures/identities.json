@@ -1,0 +1,22 @@
+[
+  {
+    "identity_id": "2420f5f3-042c-491f-afcd-194414d12c71",
+    "user_id": 30547275,
+    "has_pending_shares": false,
+    "keys": [
+      {
+        "identity_key_id": "86a5fc6f-1b4d-4b0e-b34e-c09574cc0bb9",
+        "public_key": "WAZuB1qTlkUiTV6VbHQ69ZA43eE7PTu61KCs8BjpY/Y=",
+        "encrypted_private_key": "nLGaxSYRDyv0FAJN1/72CMkecGqRLXzjshj89er3huZCwrYt68qqCUlEJv7xU9xsg5JdWUarma7OLZ5UpAwQc9bV9BnGnoYPMJYfrR2kaOxtknRupZ6q59iqbbkTLhNT0t535Sj3p8p4bkuc8OLz3k6ME/2HtqR2iCT7dbbYAZw=",
+        "encrypted_recovery_key": "zzF6W9/vlnCPji52p0QaiXIyVLrueBpHSjp2kbiMU9cg+vOCBGTMqQUKtTfnN59QWC5joJq0PqVmGtxq5jHNt5eajSyhOliZvswMBF9CAfcaznYxtR8W1IuJRZIXejLJ9WoCr00SnUKGrfhuKRqz6sS96CKpOUf1DlBWHzAKg1M=",
+        "private_signature": "QmS1BdmnooWFDrz9gYXCwW9d/D5wv4JRCx+dEvQy+S64yV/Om2HniY+FA8JXBsRqBMJRaueqNWmNRuRTl/NeAQ==",
+        "recovery_signature": "maq0lR5zFuJnHZT4rTNeTud2w7YQvXXl8u7XbJAZShxcos+PXrCdEL6gYOdyM5eYc/voWWwNJ3sYvpcWfOnfBA==",
+        "recovery_set_at": "2026-01-23 17:51:25",
+        "recovery_updated_count": 0,
+        "salt": "myZoJ8Uaw/OuACsyBWYxzw==",
+        "dek_info": "XSalsa20-Poly1305-X25519",
+        "version": "1.0.0"
+      }
+    ]
+  }
+]

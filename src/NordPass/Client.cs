@@ -187,7 +187,7 @@ public static class Client
 
     internal static BaseException MakeError<T>(RestResponse<T> response)
     {
-        if (response.HasError)
+        if (response.IsNetworkError)
             return new NetworkErrorException("Network error", response.Error);
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)

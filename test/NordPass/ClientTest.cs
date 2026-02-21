@@ -3,7 +3,10 @@
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using PasswordManagerAccess.Common;
 using PasswordManagerAccess.NordPass;
 using Shouldly;
@@ -113,6 +116,100 @@ public class ClientTest : TestBase
         minimal.Url.ShouldBe("https://minimal.example.com");
     }
 
+    //
+    // FetchIdentities
+    //
+
+    [Fact]
+    public async Task FetchIdentities_returns_parsed_identities()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("identities"))
+            .ExpectUrl("v2/users/identities");
+
+        // Act
+        var identities = await Client.FetchIdentities(rest, CancellationToken.None);
+
+        // Assert
+        identities.Length.ShouldBe(1);
+        identities[0].IdentityId.ShouldBe("2420f5f3-042c-491f-afcd-194414d12c71");
+        identities[0].UserId.ShouldBe(30547275);
+        identities[0].Keys.Length.ShouldBe(1);
+        identities[0].Keys[0].IdentityKeyId.ShouldBe("86a5fc6f-1b4d-4b0e-b34e-c09574cc0bb9");
+        identities[0].Keys[0].Salt.ShouldBe("myZoJ8Uaw/OuACsyBWYxzw==");
+    }
+
+    [Fact]
+    public async Task FetchIdentities_throws_on_http_error()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get("", HttpStatusCode.InternalServerError);
+
+        // Act/Assert
+        await Should.ThrowAsync<InternalErrorException>(() => Client.FetchIdentities(rest, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task FetchIdentities_throws_TokenExpiredException_on_401()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get("", HttpStatusCode.Unauthorized);
+
+        // Act/Assert
+        await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchIdentities(rest, CancellationToken.None));
+    }
+
+    //
+    // FetchVaultItems
+    //
+
+    [Fact]
+    public async Task FetchVaultItems_returns_parsed_items()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("vault-items-page-1"))
+            .ExpectUrl("v2/users/identities/items")
+            .ExpectUrl("identity_id=" + IdentityId)
+            .ExpectUrl("page=1")
+            .Get(GetFixture("vault-items-page-2"))
+            .ExpectUrl("page=2");
+
+        // Act
+        var items = await Client.FetchVaultItems(IdentityId, rest, CancellationToken.None);
+
+        // Assert
+        items.Length.ShouldBe(11);
+        items.Count(i => i.Type == "folder").ShouldBe(4);
+        items.Count(i => i.Type == "item").ShouldBe(6);
+        items.Count(i => i.Type == "option").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task FetchVaultItems_throws_on_http_error()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get("", HttpStatusCode.InternalServerError);
+
+        // Act/Assert
+        await Should.ThrowAsync<InternalErrorException>(() => Client.FetchVaultItems(IdentityId, rest, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task FetchVaultItems_throws_TokenExpiredException_on_401()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get("", HttpStatusCode.Unauthorized);
+
+        // Act/Assert
+        await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchVaultItems(IdentityId, rest, CancellationToken.None));
+    }
+
+    //
+    // ParseNordPassDateTime
+    //
+
     [Theory]
     [InlineData("2026-02-21 13:58:17", 2026, 2, 21, 13, 58, 17)]
     [InlineData("2000-01-01 00:00:00", 2000, 1, 1, 0, 0, 0)]
@@ -143,6 +240,7 @@ public class ClientTest : TestBase
     // Data
     //
 
+    private const string IdentityId = "2420f5f3-042c-491f-afcd-194414d12c71";
     private const string MasterPassword = "what's a master password?";
     private const string MasterKey = "wn/y0bj/U3y6rIguIWbCzUIisU8c+DYgIW65qvjwFWE=";
     private const string EncryptedIdentityPrivateKey =
