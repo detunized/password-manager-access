@@ -1,6 +1,7 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+using System;
 using System.Linq;
 using System.Text.Json;
 using PasswordManagerAccess.Common;
@@ -110,6 +111,32 @@ public class ClientTest : TestBase
         minimal.Username.ShouldBe("minuser");
         minimal.Password.ShouldBe("minpass123");
         minimal.Url.ShouldBe("https://minimal.example.com");
+    }
+
+    [Theory]
+    [InlineData("2026-02-21 13:58:17", 2026, 2, 21, 13, 58, 17)]
+    [InlineData("2000-01-01 00:00:00", 2000, 1, 1, 0, 0, 0)]
+    [InlineData("2099-12-31 23:59:59", 2099, 12, 31, 23, 59, 59)]
+    public void ParseNordPassDateTime_parses_valid_date(string input, int year, int month, int day, int hour, int minute, int second)
+    {
+        // Act
+        var result = Client.ParseNordPassDateTime(input);
+
+        // Assert
+        result.ShouldBe(new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc));
+        result.Kind.ShouldBe(DateTimeKind.Utc);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-date")]
+    [InlineData("2026-02-21")]
+    [InlineData("2026-02-21T13:58:17")]
+    [InlineData("21/02/2026 13:58:17")]
+    public void ParseNordPassDateTime_throws_on_invalid_input(string input)
+    {
+        // Act/Assert
+        Should.Throw<InternalErrorException>(() => Client.ParseNordPassDateTime(input));
     }
 
     //
