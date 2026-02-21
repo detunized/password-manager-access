@@ -153,7 +153,7 @@ static class Program
         try
         {
             var cts = new CancellationTokenSource();
-            var vault = await Client.OpenVault(config["username"], config["master-password"], new BrowserUi(), cts.Token).ConfigureAwait(false);
+            var vault = await Client.OpenVault(config["username"], config["master-password"], new BrowserUi(), new PlainStorage(), cts.Token).ConfigureAwait(false);
 
             for (var i = 0; i < vault.Accounts.Length; ++i)
             {

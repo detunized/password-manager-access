@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Text.Json.Serialization;
 
 namespace PasswordManagerAccess.NordPass;
@@ -32,13 +33,13 @@ internal static class Model
         public required string Token { get; init; }
 
         [JsonPropertyName("expires_at")]
-        public string? ExpiresAt { get; init; }
+        public required string ExpiresAt { get; init; }
 
         [JsonPropertyName("renew_token")]
-        public string? RenewToken { get; init; }
+        public required string RefreshToken { get; init; }
 
         [JsonPropertyName("renew_expires_at")]
-        public string? RenewExpiresAt { get; init; }
+        public required string RefreshExpiresAt { get; init; }
     }
 
     // Vault fixture (for testing)
@@ -125,6 +126,22 @@ internal static class Model
 
         [JsonPropertyName("folder_id")]
         public string? FolderId { get; init; }
+    }
+
+    // Stored auth for token persistence
+    internal record StoredAuth
+    {
+        [JsonPropertyName("accessToken")]
+        public required string AccessToken { get; init; }
+
+        [JsonPropertyName("expiresAt")]
+        public required DateTime ExpiresAt { get; init; }
+
+        [JsonPropertyName("refreshToken")]
+        public required string RefreshToken { get; init; }
+
+        [JsonPropertyName("refreshExpiresAt")]
+        public required DateTime RefreshExpiresAt { get; init; }
     }
 
     // Outer wrapper for decrypted item value: {"type":"password","value":"{...}"}

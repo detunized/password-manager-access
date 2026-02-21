@@ -1,9 +1,13 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,10 +19,16 @@ public static class Client
 {
     public const string ApiBase = "https://api.nordpass.com";
 
-    public static async Task<Vault> OpenVault(string email, string masterPassword, IAsyncUi ui, CancellationToken cancellationToken)
+    public static async Task<Vault> OpenVault(
+        string email,
+        string masterPassword,
+        IAsyncUi ui,
+        IAsyncSecureStorage? storage,
+        CancellationToken cancellationToken
+    )
     {
         using var transport = new RestTransport();
-        return await OpenVault(email, masterPassword, ui, transport, cancellationToken).ConfigureAwait(false);
+        return await OpenVault(email, masterPassword, ui, storage ?? new NullStorage(), transport, cancellationToken).ConfigureAwait(false);
     }
 
     //
@@ -29,12 +39,69 @@ public static class Client
         string email,
         string masterPassword,
         IAsyncUi ui,
+        IAsyncSecureStorage storage,
         IRestTransport transport,
         CancellationToken cancellationToken
     )
     {
         var rest = MakeRestClient(transport);
 
+        // Try to skip the browser flow if we have a stored token
+        var storedAuth = await LoadStoredAuth(storage, cancellationToken).ConfigureAwait(false);
+        var isAccessTokenValid = storedAuth != null && storedAuth.ExpiresAt > DateTime.UtcNow + TokenRefreshThreshold;
+        var isRefreshTokenValid = storedAuth != null && storedAuth.RefreshExpiresAt > DateTime.UtcNow + TokenRefreshThreshold;
+
+        // 1. First try with the access token
+        if (isAccessTokenValid)
+        {
+            rest.AddOrUpdateHeader("Authorization", $"Bearer {storedAuth!.AccessToken}");
+            try
+            {
+                return await GetVault().ConfigureAwait(false);
+            }
+            catch (TokenExpiredException)
+            {
+                await ClearAuth().ConfigureAwait(false);
+            }
+        }
+
+        // 2. If access token is expired but refresh token is still valid, try to refresh and do the same again
+        if (isRefreshTokenValid)
+        {
+            try
+            {
+                await RefreshAuthToken(storedAuth!.RefreshToken, storage, rest, cancellationToken).ConfigureAwait(false);
+                return await GetVault().ConfigureAwait(false);
+            }
+            catch (TokenExpiredException)
+            {
+                await ClearAuth().ConfigureAwait(false);
+            }
+        }
+
+        // 3. Both access and refresh failed, so we do a full OAuth flow now
+        await PerformFullLogin(email, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+        return await GetVault().ConfigureAwait(false);
+
+        // ---
+
+        Task<Vault> GetVault() => FetchAndDecryptVault(masterPassword, rest, cancellationToken);
+
+        async Task ClearAuth()
+        {
+            await storage.DeleteString(AuthKey, cancellationToken).ConfigureAwait(false);
+            rest.RemoveHeader("Authorization");
+        }
+    }
+
+    internal static async Task PerformFullLogin(
+        string email,
+        IAsyncUi ui,
+        IAsyncSecureStorage storage,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
         // 1. OAuth login
         var (verifier, challenge) = GeneratePkce();
         var deviceId = Common.Crypto.Sha256(Guid.NewGuid().ToByteArray()).ToHex();
@@ -46,24 +113,30 @@ public static class Client
             throw new CanceledMultiFactorException("OAuth authorization was canceled by the user");
 
         // 3. Exchange token
-        var accessToken = await ExchangeToken(verifyToken, login.AttemptId, verifier, rest, cancellationToken).ConfigureAwait(false);
-        rest.AddOrUpdateHeader("Authorization", $"Bearer {accessToken}");
+        var tokenInfo = await ExchangeToken(verifyToken, login.AttemptId, verifier, rest, cancellationToken).ConfigureAwait(false);
+        rest.AddOrUpdateHeader("Authorization", $"Bearer {tokenInfo.AccessToken}");
 
-        // 4. Fetch identities and derive master key
+        // 4. Persist tokens for future sessions
+        await StoreAuth(tokenInfo, storage, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<Vault> FetchAndDecryptVault(string masterPassword, RestClient rest, CancellationToken cancellationToken)
+    {
+        // 1. Fetch identities
         var identities = await FetchIdentities(rest, cancellationToken).ConfigureAwait(false);
         if (identities.Length == 0)
             throw new InternalErrorException("No identities found");
 
+        // TODO: what should we do when there are multiple identities?
         var identity = identities[0];
         if (identity.Keys.Length == 0)
             throw new InternalErrorException("No identity keys found");
 
-        var identityKey = identity.Keys[0];
-
-        // 5. Fetch and decrypt vault items
+        // 2. Fetch vault items for the first identity
         var items = await FetchVaultItems(identity.IdentityId, rest, cancellationToken).ConfigureAwait(false);
 
-        return DecryptVault(masterPassword, identityKey, items);
+        // 3. Decrypt vault
+        return DecryptVault(masterPassword, identity.Keys[0], items);
     }
 
     internal static Vault DecryptVault(string masterPassword, Model.IdentityKey identityKey, Model.VaultItem[] items)
@@ -110,10 +183,15 @@ public static class Client
     internal static RestClient MakeRestClient(IRestTransport transport) =>
         new RestClient(transport, ApiBase, defaultHeaders: DefaultHeaders, useSystemJson: true);
 
+    internal class TokenExpiredException(string message = "Access token expired") : BaseException(message);
+
     internal static BaseException MakeError<T>(RestResponse<T> response)
     {
         if (response.HasError)
             return new NetworkErrorException("Network error", response.Error);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            return new TokenExpiredException();
 
         return new InternalErrorException($"Request failed with HTTP {(int)response.StatusCode}");
     }
@@ -159,7 +237,9 @@ public static class Client
         return response.Data;
     }
 
-    internal static async Task<string> ExchangeToken(
+    internal record TokenInfo(string AccessToken, DateTime ExpiresAt, string RefreshToken, DateTime RefreshExpiresAt);
+
+    internal static async Task<TokenInfo> ExchangeToken(
         string verifyToken,
         string attemptId,
         string verifier,
@@ -182,7 +262,45 @@ public static class Client
         if (!response.IsSuccessful)
             throw MakeError(response);
 
-        return response.Data.Token.Token;
+        var token = response.Data.Token;
+        return new TokenInfo(
+            AccessToken: token.Token,
+            ExpiresAt: ParseNordPassDateTime(token.ExpiresAt),
+            RefreshToken: token.RefreshToken,
+            RefreshExpiresAt: ParseNordPassDateTime(token.RefreshExpiresAt)
+        );
+    }
+
+    // TODO: verify refresh endpoint with a real API trace
+    internal static async Task<bool> RefreshAuthToken(
+        string refreshToken,
+        IAsyncSecureStorage storage,
+        RestClient rest,
+        CancellationToken cancellationToken
+    )
+    {
+        var response = await rest.PostJsonAsync<Model.OAuthTokenResponse>(
+                "v1/users/oauth/token",
+                new Dictionary<string, object> { ["renew_token"] = refreshToken },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            return false;
+
+        var token = response.Data.Token;
+        var tokenInfo = new TokenInfo(
+            AccessToken: token.Token,
+            ExpiresAt: ParseNordPassDateTime(token.ExpiresAt),
+            RefreshToken: token.RefreshToken,
+            RefreshExpiresAt: ParseNordPassDateTime(token.RefreshExpiresAt)
+        );
+
+        rest.AddOrUpdateHeader("Authorization", $"Bearer {tokenInfo.AccessToken}");
+        await StoreAuth(tokenInfo, storage, cancellationToken).ConfigureAwait(false);
+
+        return true;
     }
 
     //
@@ -283,4 +401,64 @@ public static class Client
     // Returns the decrypted JSON string.
     internal static string DecryptItemValue(byte[] valueKey, byte[] encryptedValue) =>
         Crypto.DecryptXChaCha20Poly1305(encryptedValue, valueKey).ToUtf8();
+
+    //
+    // Storage helpers
+    //
+
+    private const string AuthKey = "auth";
+    private static readonly TimeSpan TokenRefreshThreshold = TimeSpan.FromMinutes(5);
+
+    private static async Task<Model.StoredAuth?> LoadStoredAuth(IAsyncSecureStorage storage, CancellationToken cancellationToken)
+    {
+        var json = await storage.LoadString(AuthKey, cancellationToken).ConfigureAwait(false);
+        if (json.IsNullOrEmpty())
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<Model.StoredAuth>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static Task StoreAuth(TokenInfo tokenInfo, IAsyncSecureStorage storage, CancellationToken cancellationToken) =>
+        storage.StoreString(
+            AuthKey,
+            JsonSerializer.Serialize(
+                new Model.StoredAuth
+                {
+                    AccessToken = tokenInfo.AccessToken,
+                    ExpiresAt = tokenInfo.ExpiresAt,
+                    RefreshToken = tokenInfo.RefreshToken,
+                    RefreshExpiresAt = tokenInfo.RefreshExpiresAt,
+                }
+            ),
+            cancellationToken
+        );
+
+    //
+    // Helpers
+    //
+
+    internal static DateTime ParseNordPassDateTime(string value)
+    {
+        if (
+            DateTime.TryParseExact(
+                value,
+                "yyyy-MM-dd HH:mm:ss",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var result
+            )
+        )
+        {
+            return result;
+        }
+
+        throw new InternalErrorException($"Failed to parse date/time value: '{value}'");
+    }
 }
