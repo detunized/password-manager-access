@@ -338,22 +338,17 @@ public class ClientTest : TestBase
         await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchIdentities(rest, CancellationToken.None));
     }
 
-    [Theory]
-    [InlineData(1000)]
-    [InlineData(1001)]
-    public async Task FetchIdentities_throws_TokenExpiredException_on_403_or_404_with_expired_error_code(int errorCode)
+    [Theory, CombinatorialData]
+    public async Task FetchIdentities_throws_TokenExpiredException_on_403_or_404_with_expired_error_code(
+        [CombinatorialValues(1000, 1001)] int errorCode,
+        [CombinatorialValues(HttpStatusCode.Forbidden, HttpStatusCode.NotFound)] HttpStatusCode statusCode
+    )
     {
-        // Arrange: 403
-        var rest = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", HttpStatusCode.Forbidden);
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", statusCode);
 
         // Act/Assert
         await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchIdentities(rest, CancellationToken.None));
-
-        // Arrange: 404 (renew endpoint returns this for invalid refresh tokens)
-        var rest404 = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", HttpStatusCode.NotFound);
-
-        // Act/Assert
-        await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchIdentities(rest404, CancellationToken.None));
     }
 
     [Fact]
@@ -422,22 +417,17 @@ public class ClientTest : TestBase
         await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchVaultItems(IdentityId, rest, CancellationToken.None));
     }
 
-    [Theory]
-    [InlineData(1000)]
-    [InlineData(1001)]
-    public async Task FetchVaultItems_throws_TokenExpiredException_on_403_or_404_with_expired_error_code(int errorCode)
+    [Theory, CombinatorialData]
+    public async Task FetchVaultItems_throws_TokenExpiredException_on_403_or_404_with_expired_error_code(
+        [CombinatorialValues(1000, 1001)] int errorCode,
+        [CombinatorialValues(HttpStatusCode.Forbidden, HttpStatusCode.NotFound)] HttpStatusCode statusCode
+    )
     {
-        // Arrange: 403
-        var rest = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", HttpStatusCode.Forbidden);
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", statusCode);
 
         // Act/Assert
         await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchVaultItems(IdentityId, rest, CancellationToken.None));
-
-        // Arrange: 404
-        var rest404 = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", HttpStatusCode.NotFound);
-
-        // Act/Assert
-        await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchVaultItems(IdentityId, rest404, CancellationToken.None));
     }
 
     //
