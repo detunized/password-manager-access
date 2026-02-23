@@ -1,6 +1,8 @@
 // Copyright (C) Dmitry Yakimenko (detunized@gmail.com).
 // Licensed under the terms of the MIT license. See LICENCE for details.
 
+#nullable enable
+
 using System;
 using System.Linq;
 using System.Net;
@@ -477,7 +479,7 @@ public class ClientTest : TestBase
     public void HasTokenExpiredErrorCode_returns_false_for_null_content()
     {
         // Arrange
-        var response = new RestResponse<string> { StatusCode = HttpStatusCode.Forbidden, Content = null };
+        var response = new RestResponse<string> { StatusCode = HttpStatusCode.Forbidden, Content = null! };
 
         // Act/Assert
         Client.HasTokenExpiredErrorCode(response).ShouldBeFalse();
