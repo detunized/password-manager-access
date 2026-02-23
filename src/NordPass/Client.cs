@@ -193,7 +193,26 @@ public static class Client
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             return new TokenExpiredException();
 
+        if (response.StatusCode == HttpStatusCode.Forbidden && HasTokenExpiredErrorCode(response))
+            return new TokenExpiredException();
+
         return new InternalErrorException($"Request failed with HTTP {(int)response.StatusCode}");
+    }
+
+    internal static bool HasTokenExpiredErrorCode<T>(RestResponse<T> response)
+    {
+        if (response is not RestResponse<string> { Content: not null } textResponse)
+            return false;
+
+        try
+        {
+            var error = JsonSerializer.Deserialize<Model.ApiErrorResponse>(textResponse.Content);
+            return error?.Errors?.Code is 1000 or 1001;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     //
@@ -271,7 +290,6 @@ public static class Client
         );
     }
 
-    // TODO: verify refresh endpoint with a real API trace
     internal static async Task<bool> RefreshAuthToken(
         string refreshToken,
         IAsyncSecureStorage storage,
@@ -279,22 +297,22 @@ public static class Client
         CancellationToken cancellationToken
     )
     {
-        var response = await rest.PostJsonAsync<Model.OAuthTokenResponse>(
-                "v1/users/oauth/token",
+        var response = await rest.PostJsonAsync<Model.OAuthToken>(
+                "v1/users/tokens/renew",
                 new Dictionary<string, object> { ["renew_token"] = refreshToken },
                 cancellationToken
             )
             .ConfigureAwait(false);
 
         if (!response.IsSuccessful)
-            return false;
+            throw MakeError(response);
 
-        var token = response.Data.Token;
+        var auth = response.Data;
         var tokenInfo = new TokenInfo(
-            AccessToken: token.Token,
-            ExpiresAt: ParseNordPassDateTime(token.ExpiresAt),
-            RefreshToken: token.RefreshToken,
-            RefreshExpiresAt: ParseNordPassDateTime(token.RefreshExpiresAt)
+            AccessToken: auth.Token,
+            ExpiresAt: ParseNordPassDateTime(auth.ExpiresAt),
+            RefreshToken: auth.RefreshToken,
+            RefreshExpiresAt: ParseNordPassDateTime(auth.RefreshExpiresAt)
         );
 
         rest.AddOrUpdateHeader("Authorization", $"Bearer {tokenInfo.AccessToken}");

@@ -143,16 +143,25 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
-            .Post(GetFixture("oauth-token")) // refresh
+            .Post(GetFixture("renew-token")) // refresh
+            .ExpectUrl("v1/users/tokens/renew")
+            .ExpectContent("renew_token")
             .Get(GetFixture("identities"))
+            .ExpectHeader("Authorization", RenewedAccessToken)
             .Get(GetFixture("vault-items-page-1"))
-            .Get(GetFixture("vault-items-page-2"));
+            .ExpectHeader("Authorization", RenewedAccessToken)
+            .Get(GetFixture("vault-items-page-2"))
+            .ExpectHeader("Authorization", RenewedAccessToken);
 
         // Act
         var vault = await Client.OpenVault(Email, MasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
 
         // Assert
         vault.Accounts.Length.ShouldBe(6);
+
+        var storedAuth = JsonSerializer.Deserialize<JsonElement>(storage.Values["auth"]);
+        storedAuth.GetProperty("accessToken").GetString().ShouldBe(RenewedAccessToken);
+        storedAuth.GetProperty("refreshToken").GetString().ShouldBe(RenewedRefreshToken);
     }
 
     [Fact]
@@ -161,8 +170,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
-            .Post("", HttpStatusCode.Unauthorized) // refresh fails
-            .Get("", HttpStatusCode.Unauthorized) // GetVault after failed refresh returns 401
+            .Post("", HttpStatusCode.Unauthorized) // refresh fails (throws TokenExpiredException)
             .Post(GetFixture("oauth-login")) // full OAuth
             .Post(GetFixture("oauth-token"))
             .Get(GetFixture("identities"))
@@ -183,7 +191,7 @@ public class ClientTest : TestBase
         var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
             .Get("", HttpStatusCode.Unauthorized) // access token rejected
-            .Post(GetFixture("oauth-token")) // refresh succeeds
+            .Post(GetFixture("renew-token")) // refresh succeeds
             .Get(GetFixture("identities"))
             .Get(GetFixture("vault-items-page-1"))
             .Get(GetFixture("vault-items-page-2"));
@@ -272,8 +280,7 @@ public class ClientTest : TestBase
         var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
             .Get("", HttpStatusCode.Unauthorized) // access token rejected
-            .Post("", HttpStatusCode.Unauthorized) // refresh also fails
-            .Get("", HttpStatusCode.Unauthorized) // GetVault after failed refresh returns 401
+            .Post("", HttpStatusCode.Unauthorized) // refresh also fails (throws TokenExpiredException)
             .Post(GetFixture("oauth-login")) // full OAuth
             .Post(GetFixture("oauth-token"))
             .Get(GetFixture("identities"))
@@ -331,6 +338,38 @@ public class ClientTest : TestBase
         await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchIdentities(rest, CancellationToken.None));
     }
 
+    [Theory]
+    [InlineData(1000)]
+    [InlineData(1001)]
+    public async Task FetchIdentities_throws_TokenExpiredException_on_403_with_expired_error_code(int errorCode)
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", HttpStatusCode.Forbidden);
+
+        // Act/Assert
+        await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchIdentities(rest, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task FetchIdentities_throws_InternalErrorException_on_403_with_other_error_code()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get("{\"errors\":{\"code\":9999}}", HttpStatusCode.Forbidden);
+
+        // Act/Assert
+        await Should.ThrowAsync<InternalErrorException>(() => Client.FetchIdentities(rest, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task FetchIdentities_throws_InternalErrorException_on_403_with_no_body()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get("", HttpStatusCode.Forbidden);
+
+        // Act/Assert
+        await Should.ThrowAsync<InternalErrorException>(() => Client.FetchIdentities(rest, CancellationToken.None));
+    }
+
     //
     // FetchVaultItems
     //
@@ -375,6 +414,71 @@ public class ClientTest : TestBase
 
         // Act/Assert
         await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchVaultItems(IdentityId, rest, CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(1000)]
+    [InlineData(1001)]
+    public async Task FetchVaultItems_throws_TokenExpiredException_on_403_with_expired_error_code(int errorCode)
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get($"{{\"errors\":{{\"code\":{errorCode}}}}}", HttpStatusCode.Forbidden);
+
+        // Act/Assert
+        await Should.ThrowAsync<Client.TokenExpiredException>(() => Client.FetchVaultItems(IdentityId, rest, CancellationToken.None));
+    }
+
+    //
+    // HasTokenExpiredErrorCode
+    //
+
+    [Theory]
+    [InlineData(1000)]
+    [InlineData(1001)]
+    public void HasTokenExpiredErrorCode_returns_true_for_expired_error_codes(int errorCode)
+    {
+        // Arrange
+        var response = new RestResponse<string> { StatusCode = HttpStatusCode.Forbidden, Content = $"{{\"errors\":{{\"code\":{errorCode}}}}}" };
+
+        // Act/Assert
+        Client.HasTokenExpiredErrorCode(response).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(2070)]
+    [InlineData(9999)]
+    [InlineData(0)]
+    public void HasTokenExpiredErrorCode_returns_false_for_other_error_codes(int errorCode)
+    {
+        // Arrange
+        var response = new RestResponse<string> { StatusCode = HttpStatusCode.Forbidden, Content = $"{{\"errors\":{{\"code\":{errorCode}}}}}" };
+
+        // Act/Assert
+        Client.HasTokenExpiredErrorCode(response).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not json")]
+    [InlineData("{}")]
+    [InlineData("{\"errors\":null}")]
+    public void HasTokenExpiredErrorCode_returns_false_for_invalid_body(string content)
+    {
+        // Arrange
+        var response = new RestResponse<string> { StatusCode = HttpStatusCode.Forbidden, Content = content };
+
+        // Act/Assert
+        Client.HasTokenExpiredErrorCode(response).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void HasTokenExpiredErrorCode_returns_false_for_null_content()
+    {
+        // Arrange
+        var response = new RestResponse<string> { StatusCode = HttpStatusCode.Forbidden, Content = null };
+
+        // Act/Assert
+        Client.HasTokenExpiredErrorCode(response).ShouldBeFalse();
     }
 
     //
@@ -443,6 +547,10 @@ public class ClientTest : TestBase
     //
 
     private const string IdentityId = "2420f5f3-042c-491f-afcd-194414d12c71";
+
+    // Access token from oauth-token.json fixture, used to verify Authorization header after refresh
+    private const string RenewedAccessToken = "834da11a5c1f85c14376c697c25454a262ee496507f858107764194d2811a420";
+    private const string RenewedRefreshToken = "e2b4d11673db0487a24c1fc6065729b8e3754aeb8c1ae12e32c742a3f3d04d03";
     private const string MasterPassword = "what's a master password?";
     private const string MasterKey = "wn/y0bj/U3y6rIguIWbCzUIisU8c+DYgIW65qvjwFWE=";
     private const string EncryptedIdentityPrivateKey =

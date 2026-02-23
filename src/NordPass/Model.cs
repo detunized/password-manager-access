@@ -128,6 +128,19 @@ internal static class Model
         public string? FolderId { get; init; }
     }
 
+    // API error response for checking error codes
+    public record ApiErrorResponse
+    {
+        [JsonPropertyName("errors")]
+        public ApiError? Errors { get; init; }
+    }
+
+    public record ApiError
+    {
+        [JsonPropertyName("code")]
+        public int Code { get; init; }
+    }
+
     // Stored auth for token persistence
     internal record StoredAuth
     {
