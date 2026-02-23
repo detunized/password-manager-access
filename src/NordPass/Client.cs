@@ -193,7 +193,7 @@ public static class Client
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             return new TokenExpiredException();
 
-        if (response.StatusCode == HttpStatusCode.Forbidden && HasTokenExpiredErrorCode(response))
+        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound && HasTokenExpiredErrorCode(response))
             return new TokenExpiredException();
 
         return new InternalErrorException($"Request failed with HTTP {(int)response.StatusCode}");
