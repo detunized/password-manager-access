@@ -89,6 +89,8 @@ internal static class Model
         public required VaultItem[] Items { get; init; }
     }
 
+    // Encrypted vault item, could be: "folder", "item" or "option"
+    // Option we ignore.
     public record VaultItem
     {
         [JsonPropertyName("item_id")]
@@ -158,7 +160,7 @@ internal static class Model
     }
 
     // Outer wrapper for decrypted item value: {"type":"password","value":"{...}"}
-    public record DecryptedValueWrapper
+    public record DecryptedItemWrapper
     {
         [JsonPropertyName("type")]
         public required string Type { get; init; }
@@ -167,15 +169,16 @@ internal static class Model
         public required string Value { get; init; }
     }
 
-    // Inner JSON from the value field
-    public record DecryptedValue
+    // Inner JSON from the value field for "folder" items
+    public record DecryptedFolder
     {
-        [JsonPropertyName("type")]
-        public required string Type { get; init; }
+        [JsonPropertyName("title")]
+        public string? Title { get; init; }
+    }
 
-        [JsonPropertyName("uuid")]
-        public string? Uuid { get; init; }
-
+    // Inner JSON from the value field for "password" items
+    public record DecryptedPassword
+    {
         [JsonPropertyName("title")]
         public string? Title { get; init; }
 
@@ -190,5 +193,8 @@ internal static class Model
 
         [JsonPropertyName("note")]
         public string? Note { get; init; }
+
+        [JsonPropertyName("additional_urls")]
+        public string[]? AdditionalUrls { get; init; }
     }
 }

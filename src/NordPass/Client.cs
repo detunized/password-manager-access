@@ -171,6 +171,7 @@ public static class Client
                 }
                 return DecryptVaultItem(publicKey, privateKey, i, folder?.Name ?? "");
             })
+            .Where(a => a != null)
             .ToArray();
 
         return new Vault(accounts);
@@ -371,7 +372,8 @@ public static class Client
 
     // Decrypts a vault item through the full chain: item key → value key → value → Account.
     // The identity X25519 keys must be pre-derived from the identity Ed25519 keypair.
-    internal static Account DecryptVaultItem(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, Model.VaultItem item, string folder)
+    // Only items of type "password" are parsed, other types are ignored (return null).
+    internal static Account? DecryptVaultItem(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, Model.VaultItem item, string folder)
     {
         // 1. Decrypt item key (sealed box with identity X25519)
         var (itemX25519Public, itemX25519Private) = DecryptItemX25519KeyPair(
@@ -380,19 +382,25 @@ public static class Client
             item.ItemKey.EncryptedItemPrivateKey.Decode64()
         );
 
-        // 3. Decrypt value key (sealed box with item X25519)
+        // 2. Decrypt value key (sealed box with item X25519)
         var valueKey = DecryptValueKey(itemX25519Public, itemX25519Private, item.EncryptedValueKey.Decode64());
 
-        // 4. Decrypt value (XChaCha20 with value key)
+        // 3. Decrypt value (XChaCha20 with value key)
         var outerJson = DecryptItemValue(valueKey, item.Value.Decode64());
 
-        // 5. Parse the outer wrapper {"type":"...","value":"..."} and extract inner JSON
+        // 4. Parse the outer wrapper {"type":"...","value":"..."} and extract inner JSON
         var wrapper =
-            JsonSerializer.Deserialize<Model.DecryptedValueWrapper>(outerJson)
+            JsonSerializer.Deserialize<Model.DecryptedItemWrapper>(outerJson)
             ?? throw new InternalErrorException("Failed to parse decrypted item wrapper");
+
+        // TODO: Do we need to handle other types like "secure_note", "card", etc? For now we only parse "password" items and ignore the rest.
+        if (wrapper.Type != "password")
+            return null;
+
+        // 5. Parse the value (inner JSON)
         var parsed =
-            JsonSerializer.Deserialize<Model.DecryptedValue>(wrapper.Value)
-            ?? throw new InternalErrorException("Failed to parse decrypted item value");
+            JsonSerializer.Deserialize<Model.DecryptedPassword>(wrapper.Value)
+            ?? throw new InternalErrorException("Failed to parse decrypted password value");
 
         // 6. Map to Account
         return new Account(
@@ -411,10 +419,10 @@ public static class Client
         var valueKey = DecryptValueKey(folderX25519PublicKey, folderX25519PrivateKey, folder.EncryptedValueKey.Decode64());
         var outerJson = DecryptItemValue(valueKey, folder.Value.Decode64());
         var wrapper =
-            JsonSerializer.Deserialize<Model.DecryptedValueWrapper>(outerJson)
+            JsonSerializer.Deserialize<Model.DecryptedItemWrapper>(outerJson)
             ?? throw new InternalErrorException("Failed to parse decrypted folder wrapper");
         var parsed =
-            JsonSerializer.Deserialize<Model.DecryptedValue>(wrapper.Value)
+            JsonSerializer.Deserialize<Model.DecryptedFolder>(wrapper.Value)
             ?? throw new InternalErrorException("Failed to parse decrypted folder value");
         return parsed.Title ?? "";
     }
