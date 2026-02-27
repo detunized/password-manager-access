@@ -53,7 +53,7 @@ namespace PasswordManagerAccess.Example.Common
             if (filename == null)
                 throw new InvalidOperationException("Couldn't find config.yaml, " + "wanted to put storage.yaml in the same directory");
 
-            return Path.GetDirectoryName(filename) + "/storage.yaml";
+            return Path.Combine(Path.GetDirectoryName(filename) ?? "", "storage.yaml");
         }
 
         private static string EncodeValue(string s)
