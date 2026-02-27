@@ -123,6 +123,18 @@ public class ClientTest : TestBase
         vault.Accounts.First(a => a.Id == "1a1448bf-4ef4-438d-b40e-f1fda760a500").Folder.ShouldBe("Shopping");
         vault.Accounts.First(a => a.Id == "07f2c7ac-c63d-4b61-a876-91bf14904f49").Folder.ShouldBe("Entertainment");
         vault.Accounts.First(a => a.Id == "9ec2a9f1-78c0-4bb2-b594-fc9bd14ae928").Folder.ShouldBe("Finance");
+
+        // GitHub has additional URLs and custom fields
+        var github = vault.Accounts.First(a => a.Name == "GitHub");
+        github.Username.ShouldBe("testuser@example.com");
+        github.Password.ShouldBe("S3cureP@ss!2024");
+        github.Folder.ShouldBe("Development");
+        github.Urls.ShouldBe(["https://github.com/login", "https://gist.github.com", "https://github.com/settings/profile"]);
+        github.Url.ShouldBe("https://github.com/login");
+        github.CustomFields.Length.ShouldBe(3);
+        github.CustomFields[0].ShouldBe(new CustomField("Organization", "acme-corp-dev"));
+        github.CustomFields[1].ShouldBe(new CustomField("API Token", "ghp_xK2mN8pQrT5vW9yZ3aB6cE1fH4jL7"));
+        github.CustomFields[2].ShouldBe(new CustomField("Token Expiry", "Thursday, April 30, 2026"));
     }
 
     //
@@ -566,7 +578,6 @@ public class ClientTest : TestBase
     private const string MasterKey = "wn/y0bj/U3y6rIguIWbCzUIisU8c+DYgIW65qvjwFWE=";
     private const string EncryptedIdentityPrivateKey =
         "nLGaxSYRDyv0FAJN1/72CMkecGqRLXzjshj89er3huZCwrYt68qqCUlEJv7xU9xsg5JdWUarma7OLZ5UpAwQc9bV9BnGnoYPMJYfrR2kaOxtknRupZ6q59iqbbkTLhNT0t535Sj3p8p4bkuc8OLz3k6ME/2HtqR2iCT7dbbYAZw=";
-    private const string Ed25519SecretKey = "ztjjSrsP4Urdti2v4dZCCEApFhec9eL+TPspdKzBJ5lYBm4HWpOWRSJNXpVsdDr1kDjd4Ts9O7rUoKzwGOlj9g==";
 
     // Identity X25519 keys (converted from Ed25519)
     private const string X25519PublicKey = "HilP+ma8Gin9BkJWyRHwqqCQUAB6zDqKqkUi5yuZUA4=";
@@ -575,7 +586,6 @@ public class ClientTest : TestBase
     // "Blah!" item key
     private const string EncryptedItemPrivateKey =
         "vrcggxlwgRqy33z6M4clgZA0ZekeDCGgKDscncS7mUZyR08zzduGJD062dwFwX9iMgI9g49oZtUVX2LFANrvkflLD7tve2F6VTyAVd20L6fuv6WQT+dCZ1i3wpMDoI8IMhXrFUdN6RJBaNqoh5TrhDvzCu2oFe57Rqla76bKW8BXslWTzYJMWQ==";
-    private const string DecryptedItemEd25519Key = "KItQaOTkQb6nkbWbFF5MWRkVs/2HtYW2KRZ30ux3qRTR0FW9Y8v1o/NW2wnG2ud4Z2oGw5NI0DzKYMmOj0VOhQ==";
 
     // "Blah!" item X25519 keys (converted from item Ed25519)
     private const string ItemX25519PublicKey = "lzMYzwLeVvi1ZRzz6y/b40ABvPHKgx+yDggrY7J/wiA=";
