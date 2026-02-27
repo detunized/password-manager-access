@@ -20,22 +20,22 @@ namespace PasswordManagerAccess.Test.NordPass;
 public class ClientTest : TestBase
 {
     [Fact]
-    public void DecryptIdentityKey_returns_ed25519_keypair()
+    public void DecryptIdentityX25519KeyPair_returns_x25519_keys()
     {
         // Arrange
         var masterKey = MasterKey.Decode64();
         var encryptedPrivateKey = EncryptedIdentityPrivateKey.Decode64();
 
         // Act
-        var ed25519Key = Client.DecryptIdentityKey(masterKey, encryptedPrivateKey);
+        var (publicKey, privateKey) = Client.DecryptIdentityX25519KeyPair(masterKey, encryptedPrivateKey);
 
         // Assert
-        ed25519Key.Length.ShouldBe(64);
-        ed25519Key.ShouldBe(Ed25519SecretKey.Decode64());
+        publicKey.ShouldBe(X25519PublicKey.Decode64());
+        privateKey.ShouldBe(X25519PrivateKey.Decode64());
     }
 
     [Fact]
-    public void DecryptItemKey_returns_ed25519_keypair()
+    public void DecryptItemX25519KeyPair_returns_x25519_keys()
     {
         // Arrange
         var x25519Public = X25519PublicKey.Decode64();
@@ -43,11 +43,11 @@ public class ClientTest : TestBase
         var encryptedItemKey = EncryptedItemPrivateKey.Decode64();
 
         // Act
-        var ed25519Key = Client.DecryptItemKey(x25519Public, x25519Private, encryptedItemKey);
+        var (publicKey, privateKey) = Client.DecryptItemX25519KeyPair(x25519Public, x25519Private, encryptedItemKey);
 
         // Assert
-        ed25519Key.Length.ShouldBe(64);
-        ed25519Key.ShouldBe(DecryptedItemEd25519Key.Decode64());
+        publicKey.ShouldBe(ItemX25519PublicKey.Decode64());
+        privateKey.ShouldBe(ItemX25519PrivateKey.Decode64());
     }
 
     [Fact]

@@ -145,18 +145,14 @@ public static class Client
     {
         var salt = identityKey.Salt.Decode64();
         var masterKey = Crypto.DeriveKey(masterPassword, salt);
-        var identityEd25519Key = DecryptIdentityKey(masterKey, identityKey.EncryptedPrivateKey.Decode64());
-        var x25519Public = Crypto.Ed25519ToX25519Public(identityEd25519Key[32..]);
-        var x25519Private = Crypto.Ed25519ToX25519Private(identityEd25519Key);
+        var (x25519Public, x25519Private) = DecryptIdentityX25519KeyPair(masterKey, identityKey.EncryptedPrivateKey.Decode64());
 
         // Decrypt folder keys and names (items inside folders are sealed with the folder's key)
         var folders = items
             .Where(i => i.Type == "folder")
             .Select(i =>
             {
-                var ed25519Key = DecryptItemKey(x25519Public, x25519Private, i.ItemKey.EncryptedItemPrivateKey.Decode64());
-                var publicKey = Crypto.Ed25519ToX25519Public(ed25519Key[32..]);
-                var privateKey = Crypto.Ed25519ToX25519Private(ed25519Key);
+                var (publicKey, privateKey) = DecryptItemX25519KeyPair(x25519Public, x25519Private, i.ItemKey.EncryptedItemPrivateKey.Decode64());
                 var name = DecryptFolderName(publicKey, privateKey, i);
                 return new DecryptedFolder(i.ItemId, name, publicKey, privateKey);
             })
@@ -378,11 +374,11 @@ public static class Client
     internal static Account DecryptVaultItem(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, Model.VaultItem item, string folder)
     {
         // 1. Decrypt item key (sealed box with identity X25519)
-        var itemEd25519Key = DecryptItemKey(identityX25519PublicKey, identityX25519PrivateKey, item.ItemKey.EncryptedItemPrivateKey.Decode64());
-
-        // 2. Convert item Ed25519 → X25519
-        var itemX25519Public = Crypto.Ed25519ToX25519Public(itemEd25519Key[32..]);
-        var itemX25519Private = Crypto.Ed25519ToX25519Private(itemEd25519Key);
+        var (itemX25519Public, itemX25519Private) = DecryptItemX25519KeyPair(
+            identityX25519PublicKey,
+            identityX25519PrivateKey,
+            item.ItemKey.EncryptedItemPrivateKey.Decode64()
+        );
 
         // 3. Decrypt value key (sealed box with item X25519)
         var valueKey = DecryptValueKey(itemX25519Public, itemX25519Private, item.EncryptedValueKey.Decode64());
@@ -423,15 +419,17 @@ public static class Client
         return parsed.Title ?? "";
     }
 
-    // Decrypts the identity private key using the master key.
-    // Returns the raw Ed25519 keypair (64 bytes: 32-byte seed + 32-byte public key).
-    internal static byte[] DecryptIdentityKey(byte[] masterKey, byte[] encryptedPrivateKey) =>
-        Crypto.DecryptXChaCha20Poly1305(encryptedPrivateKey, masterKey).Decode64();
+    internal static (byte[] Public, byte[] Private) DecryptIdentityX25519KeyPair(byte[] masterKey, byte[] encryptedPrivateKey) =>
+        Ed25519ToX25519KeyPair(Crypto.DecryptXChaCha20Poly1305(encryptedPrivateKey, masterKey).Decode64());
 
-    // Decrypts the item private key using the identity X25519 keypair (sealed box).
-    // Returns the raw Ed25519 keypair (64 bytes: 32-byte seed + 32-byte public key).
-    internal static byte[] DecryptItemKey(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, byte[] encryptedItemPrivateKey) =>
-        Crypto.DecryptSealedBox(encryptedItemPrivateKey, identityX25519PublicKey, identityX25519PrivateKey).Decode64();
+    internal static (byte[] Public, byte[] Private) DecryptItemX25519KeyPair(
+        byte[] identityX25519PublicKey,
+        byte[] identityX25519PrivateKey,
+        byte[] encryptedItemPrivateKey
+    ) => Ed25519ToX25519KeyPair(Crypto.DecryptSealedBox(encryptedItemPrivateKey, identityX25519PublicKey, identityX25519PrivateKey).Decode64());
+
+    private static (byte[] Public, byte[] Private) Ed25519ToX25519KeyPair(byte[] ed25519Key) =>
+        (Crypto.Ed25519ToX25519Public(ed25519Key[32..]), Crypto.Ed25519ToX25519Private(ed25519Key));
 
     // Decrypts the value key using the item X25519 keypair (sealed box).
     // Returns the 32-byte symmetric key used to decrypt the item value.
