@@ -22,7 +22,7 @@ public class ModelTest : TestBase
         // Assert
         vault.ShouldNotBeNull();
         vault.Identities.Length.ShouldBe(1);
-        vault.VaultItems.Length.ShouldBe(11);
+        vault.VaultItems.Length.ShouldBe(19);
         vault.VaultItems.ShouldContain(i => i.Type == "folder");
         vault.VaultItems.ShouldContain(i => i.Type == "item");
         vault.VaultItems.ShouldContain(i => i.Type == "option");

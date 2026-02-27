@@ -166,7 +166,7 @@ static class Program
                         + "        name: {2}\n"
                         + "    username: {3}\n"
                         + "    password: {4}\n"
-                        + "         url: {5}\n"
+                        + "        urls: {5}\n"
                         + "        note: {6}\n"
                         + "      folder: {7}\n",
                     i + 1,
@@ -174,7 +174,7 @@ static class Program
                     a.Name,
                     a.Username,
                     a.Password,
-                    a.Url,
+                    string.Join(", ", a.Urls),
                     a.Note,
                     a.Folder
                 );

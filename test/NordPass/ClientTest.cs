@@ -111,7 +111,7 @@ public class ClientTest : TestBase
         blah.Password.ShouldBe("blah blah");
         blah.Url.ShouldBe("https://blah.com");
         blah.Note.ShouldBe("blah blah blah");
-        blah.Folder.ShouldBe("");
+        blah.Folder.ShouldBe("Foder/with/slashes\\and\\back\\slashes~!@#$%^&*()_` ?");
 
         var minimal = vault.Accounts.First(a => a.Name == "Minimal Entry");
         minimal.Username.ShouldBe("minuser");
@@ -400,9 +400,9 @@ public class ClientTest : TestBase
         var items = await Client.FetchVaultItems(IdentityId, rest, CancellationToken.None);
 
         // Assert
-        items.Length.ShouldBe(11);
-        items.Count(i => i.Type == "folder").ShouldBe(4);
-        items.Count(i => i.Type == "item").ShouldBe(6);
+        items.Length.ShouldBe(19);
+        items.Count(i => i.Type == "folder").ShouldBe(5);
+        items.Count(i => i.Type == "item").ShouldBe(13);
         items.Count(i => i.Type == "option").ShouldBe(1);
     }
 

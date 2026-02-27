@@ -195,6 +195,6 @@ internal static class Model
         public string? Note { get; init; }
 
         [JsonPropertyName("additional_urls")]
-        public string[]? AdditionalUrls { get; init; }
+        public string?[]? AdditionalUrls { get; init; }
     }
 }

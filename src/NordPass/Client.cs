@@ -403,12 +403,14 @@ public static class Client
             ?? throw new InternalErrorException("Failed to parse decrypted password value");
 
         // 6. Map to Account
+        var urls = new[] { parsed.Url }.Concat(parsed.AdditionalUrls ?? []).Where(u => !u.IsNullOrEmpty()).ToArray();
+
         return new Account(
             Id: item.ItemId,
             Name: parsed.Title ?? "",
             Username: parsed.Username ?? "",
             Password: parsed.Secret ?? "",
-            Url: parsed.Url ?? "",
+            Urls: urls,
             Note: parsed.Note ?? "",
             Folder: folder
         );
