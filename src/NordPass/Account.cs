@@ -3,4 +3,4 @@
 
 namespace PasswordManagerAccess.NordPass;
 
-public record Account(string Id, string Name, string Username, string Password, string Url, string Note);
+public record Account(string Id, string Name, string Username, string Password, string Url, string Note, string Folder);

@@ -147,14 +147,18 @@ public static class Client
         var x25519Public = Crypto.Ed25519ToX25519Public(identityEd25519Key[32..]);
         var x25519Private = Crypto.Ed25519ToX25519Private(identityEd25519Key);
 
-        // Decrypt folder keys (items inside folders are sealed with the folder's key)
+        // Decrypt folder keys and names (items inside folders are sealed with the folder's key)
         var folderKeys = new Dictionary<string, (byte[] Public, byte[] Private)>();
+        var folderNames = new Dictionary<string, string>();
         foreach (var folder in items.Where(i => i.Type == "folder"))
         {
             var folderEd25519Key = DecryptItemKey(x25519Public, x25519Private, folder.ItemKey.EncryptedItemPrivateKey.Decode64());
             var folderX25519Public = Crypto.Ed25519ToX25519Public(folderEd25519Key[32..]);
             var folderX25519Private = Crypto.Ed25519ToX25519Private(folderEd25519Key);
             folderKeys[folder.ItemId] = (folderX25519Public, folderX25519Private);
+
+            var folderName = DecryptFolderName(folderX25519Public, folderX25519Private, folder);
+            folderNames[folder.ItemId] = folderName;
         }
 
         var accounts = items
@@ -162,9 +166,10 @@ public static class Client
             .Select(i =>
             {
                 var folderId = i.ItemKey.FolderId;
+                var folderName = folderId != null && folderNames.TryGetValue(folderId, out var name) ? name : "";
                 if (folderId != null && folderKeys.TryGetValue(folderId, out var fk))
-                    return DecryptVaultItem(fk.Public, fk.Private, i);
-                return DecryptVaultItem(x25519Public, x25519Private, i);
+                    return DecryptVaultItem(fk.Public, fk.Private, i, folderName);
+                return DecryptVaultItem(x25519Public, x25519Private, i, folderName);
             })
             .ToArray();
 
@@ -366,7 +371,7 @@ public static class Client
 
     // Decrypts a vault item through the full chain: item key → value key → value → Account.
     // The identity X25519 keys must be pre-derived from the identity Ed25519 keypair.
-    internal static Account DecryptVaultItem(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, Model.VaultItem item)
+    internal static Account DecryptVaultItem(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, Model.VaultItem item, string folder)
     {
         // 1. Decrypt item key (sealed box with identity X25519)
         var itemEd25519Key = DecryptItemKey(identityX25519PublicKey, identityX25519PrivateKey, item.ItemKey.EncryptedItemPrivateKey.Decode64());
@@ -396,8 +401,22 @@ public static class Client
             Username: parsed.Username ?? "",
             Password: parsed.Secret ?? "",
             Url: parsed.Url ?? "",
-            Note: parsed.Note ?? ""
+            Note: parsed.Note ?? "",
+            Folder: folder
         );
+    }
+
+    internal static string DecryptFolderName(byte[] folderX25519PublicKey, byte[] folderX25519PrivateKey, Model.VaultItem folder)
+    {
+        var valueKey = DecryptValueKey(folderX25519PublicKey, folderX25519PrivateKey, folder.EncryptedValueKey.Decode64());
+        var outerJson = DecryptItemValue(valueKey, folder.Value.Decode64());
+        var wrapper =
+            JsonSerializer.Deserialize<Model.DecryptedValueWrapper>(outerJson)
+            ?? throw new InternalErrorException("Failed to parse decrypted folder wrapper");
+        var parsed =
+            JsonSerializer.Deserialize<Model.DecryptedValue>(wrapper.Value)
+            ?? throw new InternalErrorException("Failed to parse decrypted folder value");
+        return parsed.Title ?? "";
     }
 
     // Decrypts the identity private key using the master key.

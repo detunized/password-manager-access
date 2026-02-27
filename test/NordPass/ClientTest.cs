@@ -111,11 +111,18 @@ public class ClientTest : TestBase
         blah.Password.ShouldBe("blah blah");
         blah.Url.ShouldBe("https://blah.com");
         blah.Note.ShouldBe("blah blah blah");
+        blah.Folder.ShouldBe("");
 
         var minimal = vault.Accounts.First(a => a.Name == "Minimal Entry");
         minimal.Username.ShouldBe("minuser");
         minimal.Password.ShouldBe("minpass123");
         minimal.Url.ShouldBe("https://minimal.example.com");
+        minimal.Folder.ShouldBe("");
+
+        vault.Accounts.First(a => a.Id == "a23b4802-d3d5-4f1c-88d0-a564200aee6d").Folder.ShouldBe("Development");
+        vault.Accounts.First(a => a.Id == "1a1448bf-4ef4-438d-b40e-f1fda760a500").Folder.ShouldBe("Shopping");
+        vault.Accounts.First(a => a.Id == "07f2c7ac-c63d-4b61-a876-91bf14904f49").Folder.ShouldBe("Entertainment");
+        vault.Accounts.First(a => a.Id == "9ec2a9f1-78c0-4bb2-b594-fc9bd14ae928").Folder.ShouldBe("Finance");
     }
 
     //

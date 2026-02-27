@@ -167,14 +167,16 @@ static class Program
                         + "    username: {3}\n"
                         + "    password: {4}\n"
                         + "         url: {5}\n"
-                        + "        note: {6}\n",
+                        + "        note: {6}\n"
+                        + "      folder: {7}\n",
                     i + 1,
                     a.Id,
                     a.Name,
                     a.Username,
                     a.Password,
                     a.Url,
-                    a.Note
+                    a.Note,
+                    a.Folder
                 );
             }
         }
