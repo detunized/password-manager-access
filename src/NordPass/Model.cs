@@ -196,5 +196,20 @@ internal static class Model
 
         [JsonPropertyName("additional_urls")]
         public string?[]? AdditionalUrls { get; init; }
+
+        [JsonPropertyName("custom_fields")]
+        public DecryptedCustomField[]? CustomFields { get; init; }
+    }
+
+    public record DecryptedCustomField
+    {
+        [JsonPropertyName("type")]
+        public required string Type { get; init; }
+
+        [JsonPropertyName("label")]
+        public string? Label { get; init; }
+
+        [JsonPropertyName("value")]
+        public string? Value { get; init; }
     }
 }

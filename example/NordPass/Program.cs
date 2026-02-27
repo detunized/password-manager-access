@@ -168,7 +168,7 @@ static class Program
                         + "    password: {4}\n"
                         + "        urls: {5}\n"
                         + "        note: {6}\n"
-                        + "      folder: {7}\n",
+                        + "      folder: {7}",
                     i + 1,
                     a.Id,
                     a.Name,
@@ -178,6 +178,9 @@ static class Program
                     a.Note,
                     a.Folder
                 );
+                foreach (var cf in a.CustomFields)
+                    Console.WriteLine($"      custom: {cf.Name} = {cf.Value}");
+                Console.WriteLine();
             }
         }
         catch (BaseException e)

@@ -404,6 +404,7 @@ public static class Client
 
         // 6. Map to Account
         var urls = new[] { parsed.Url }.Concat(parsed.AdditionalUrls ?? []).Where(u => !u.IsNullOrEmpty()).ToArray();
+        var customFields = parsed.CustomFields?.Select(ParseCustomField).ToArray() ?? [];
 
         return new Account(
             Id: item.ItemId,
@@ -412,9 +413,16 @@ public static class Client
             Password: parsed.Secret ?? "",
             Urls: urls,
             Note: parsed.Note ?? "",
-            Folder: folder
+            Folder: folder,
+            CustomFields: customFields
         );
     }
+
+    internal static CustomField ParseCustomField(Model.DecryptedCustomField field) =>
+        new(Name: field.Label ?? "", Value: field.Type == "date" ? ParseDateValue(field.Value ?? "") : field.Value ?? "");
+
+    internal static string ParseDateValue(string value) =>
+        long.TryParse(value, out var epoch) ? DateTimeOffset.FromUnixTimeSeconds(epoch).UtcDateTime.ToString("D") : value;
 
     internal static string DecryptFolderName(byte[] folderX25519PublicKey, byte[] folderX25519PrivateKey, Model.VaultItem folder)
     {
