@@ -139,6 +139,8 @@ public static class Client
         return DecryptVault(masterPassword, identity.Keys[0], items);
     }
 
+    internal record DecryptedFolder(string Id, string Name, byte[] Public, byte[] Private);
+
     internal static Vault DecryptVault(string masterPassword, Model.IdentityKey identityKey, Model.VaultItem[] items)
     {
         var salt = identityKey.Salt.Decode64();
@@ -148,28 +150,30 @@ public static class Client
         var x25519Private = Crypto.Ed25519ToX25519Private(identityEd25519Key);
 
         // Decrypt folder keys and names (items inside folders are sealed with the folder's key)
-        var folderKeys = new Dictionary<string, (byte[] Public, byte[] Private)>();
-        var folderNames = new Dictionary<string, string>();
-        foreach (var folder in items.Where(i => i.Type == "folder"))
-        {
-            var folderEd25519Key = DecryptItemKey(x25519Public, x25519Private, folder.ItemKey.EncryptedItemPrivateKey.Decode64());
-            var folderX25519Public = Crypto.Ed25519ToX25519Public(folderEd25519Key[32..]);
-            var folderX25519Private = Crypto.Ed25519ToX25519Private(folderEd25519Key);
-            folderKeys[folder.ItemId] = (folderX25519Public, folderX25519Private);
-
-            var folderName = DecryptFolderName(folderX25519Public, folderX25519Private, folder);
-            folderNames[folder.ItemId] = folderName;
-        }
+        var folders = items
+            .Where(i => i.Type == "folder")
+            .Select(i =>
+            {
+                var ed25519Key = DecryptItemKey(x25519Public, x25519Private, i.ItemKey.EncryptedItemPrivateKey.Decode64());
+                var publicKey = Crypto.Ed25519ToX25519Public(ed25519Key[32..]);
+                var privateKey = Crypto.Ed25519ToX25519Private(ed25519Key);
+                var name = DecryptFolderName(publicKey, privateKey, i);
+                return new DecryptedFolder(i.ItemId, name, publicKey, privateKey);
+            })
+            .ToDictionary(x => x.Id);
 
         var accounts = items
             .Where(i => i.Type == "item")
             .Select(i =>
             {
-                var folderId = i.ItemKey.FolderId;
-                var folderName = folderId != null && folderNames.TryGetValue(folderId, out var name) ? name : "";
-                if (folderId != null && folderKeys.TryGetValue(folderId, out var fk))
-                    return DecryptVaultItem(fk.Public, fk.Private, i, folderName);
-                return DecryptVaultItem(x25519Public, x25519Private, i, folderName);
+                var publicKey = x25519Public;
+                var privateKey = x25519Private;
+                if (folders.TryGetValue(i.ItemKey.FolderId ?? "", out var folder))
+                {
+                    publicKey = folder.Public;
+                    privateKey = folder.Private;
+                }
+                return DecryptVaultItem(publicKey, privateKey, i, folder?.Name ?? "");
             })
             .ToArray();
 
@@ -186,7 +190,7 @@ public static class Client
     }
 
     internal static RestClient MakeRestClient(IRestTransport transport) =>
-        new RestClient(transport, ApiBase, defaultHeaders: DefaultHeaders, useSystemJson: true);
+        new(transport, ApiBase, defaultHeaders: DefaultHeaders, useSystemJson: true);
 
     internal class TokenExpiredException(string message = "Access token expired") : BaseException(message);
 
