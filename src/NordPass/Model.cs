@@ -10,6 +10,16 @@ namespace PasswordManagerAccess.NordPass;
 
 internal static class Model
 {
+    // GET /v1/users/oauth/providers?email=...
+    public record OAuthProvidersResponse
+    {
+        [JsonPropertyName("provider")]
+        public required string Provider { get; init; }
+
+        [JsonPropertyName("region")]
+        public required string Region { get; init; }
+    }
+
     // POST /v1/users/oauth/login
     public record OAuthLoginResponse
     {

@@ -17,8 +17,6 @@ namespace PasswordManagerAccess.NordPass;
 
 public static class Client
 {
-    public const string ApiBase = "https://api.nordpass.com";
-
     public static async Task<Vault> OpenVault(
         string email,
         string masterPassword,
@@ -44,14 +42,16 @@ public static class Client
         CancellationToken cancellationToken
     )
     {
-        var rest = MakeRestClient(transport);
+        // 1. Discover the OAuth provider and regional API base for this account
+        var providers = await FetchOAuthProviders(email, MakeRestClient(transport), cancellationToken).ConfigureAwait(false);
+        var rest = MakeRestClient(transport, GetApiBase(providers.Region));
 
         // Try to skip the browser flow if we have a stored token
         var storedAuth = await LoadStoredAuth(storage, cancellationToken).ConfigureAwait(false);
         var isAccessTokenValid = storedAuth != null && storedAuth.ExpiresAt > DateTime.UtcNow + TokenRefreshThreshold;
         var isRefreshTokenValid = storedAuth != null && storedAuth.RefreshExpiresAt > DateTime.UtcNow + TokenRefreshThreshold;
 
-        // 1. First try with the access token
+        // 2. First try with the access token
         if (isAccessTokenValid)
         {
             rest.AddOrUpdateHeader("Authorization", $"Bearer {storedAuth!.AccessToken}");
@@ -65,7 +65,7 @@ public static class Client
             }
         }
 
-        // 2. If access token is expired but refresh token is still valid, try to refresh and do the same again
+        // 3. If access token is expired but refresh token is still valid, try to refresh and do the same again
         if (isRefreshTokenValid)
         {
             try
@@ -79,8 +79,8 @@ public static class Client
             }
         }
 
-        // 3. Both access and refresh failed, so we do a full OAuth flow now
-        await PerformFullLogin(email, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+        // 4. Both access and refresh failed, so we do a full OAuth flow now
+        await PerformFullLogin(email, providers.Provider, ui, storage, rest, cancellationToken).ConfigureAwait(false);
         return await GetVault().ConfigureAwait(false);
 
         // ---
@@ -96,6 +96,7 @@ public static class Client
 
     internal static async Task PerformFullLogin(
         string email,
+        string provider,
         IAsyncUi ui,
         IAsyncSecureStorage storage,
         RestClient rest,
@@ -105,7 +106,7 @@ public static class Client
         // 1. OAuth login
         var (verifier, challenge) = GeneratePkce();
         var deviceId = Common.Crypto.Sha256(Guid.NewGuid().ToByteArray()).ToHex();
-        var login = await InitiateOAuthLogin(email, deviceId, challenge, rest, cancellationToken).ConfigureAwait(false);
+        var login = await InitiateOAuthLogin(email, deviceId, challenge, provider, rest, cancellationToken).ConfigureAwait(false);
 
         // 2. Browser-based authentication
         var verifyToken = await ui.AuthorizeOAuth(login.RedirectUrl, cancellationToken).ConfigureAwait(false);
@@ -186,8 +187,29 @@ public static class Client
         return (verifier, challenge);
     }
 
-    internal static RestClient MakeRestClient(IRestTransport transport) =>
-        new(transport, ApiBase, defaultHeaders: DefaultHeaders, useSystemJson: true);
+    internal static RestClient MakeRestClient(IRestTransport transport, string apiBase = DefaultApiBase) =>
+        new(transport, apiBase, defaultHeaders: DefaultHeaders, useSystemJson: true);
+
+    internal static string GetApiBase(string region) =>
+        region switch
+        {
+            "eu" => "https://api.eu.nordpass.com",
+            _ => DefaultApiBase,
+        };
+
+    internal static async Task<Model.OAuthProvidersResponse> FetchOAuthProviders(string email, RestClient rest, CancellationToken cancellationToken)
+    {
+        var response = await rest.GetAsync<Model.OAuthProvidersResponse>(
+                $"v1/users/oauth/providers?email={Uri.EscapeDataString(email)}",
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        if (!response.IsSuccessful)
+            throw MakeError(response);
+
+        return response.Data;
+    }
 
     internal class TokenExpiredException(string message = "Access token expired") : BaseException(message);
 
@@ -229,6 +251,7 @@ public static class Client
         string email,
         string deviceId,
         string challenge,
+        string provider,
         RestClient rest,
         CancellationToken cancellationToken
     )
@@ -240,7 +263,7 @@ public static class Client
                     ["challenge"] = challenge,
                     ["redirect_uri"] = "https://app.nordpass.com/login",
                     ["preferred_flow"] = "login",
-                    ["provider"] = "nord_account",
+                    ["provider"] = provider,
                     ["dark_mode"] = false,
                     ["language"] = "en",
                     ["login_url"] = "https://app.nordpass.com/login",
@@ -518,4 +541,10 @@ public static class Client
 
         throw new InternalErrorException($"Failed to parse date/time value: '{value}'");
     }
+
+    //
+    // Data
+    //
+
+    internal const string DefaultApiBase = "https://api.nordpass.com";
 }

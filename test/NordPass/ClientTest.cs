@@ -147,6 +147,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Get(GetFixture("identities"))
             .Get(GetFixture("vault-items-page-1"))
             .Get(GetFixture("vault-items-page-2"));
@@ -164,6 +165,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Post(GetFixture("renew-token")) // refresh
             .ExpectUrl("v1/users/tokens/renew")
             .ExpectContent("renew_token")
@@ -191,6 +193,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Post("", HttpStatusCode.Unauthorized) // refresh fails (throws TokenExpiredException)
             .Post(GetFixture("oauth-login")) // full OAuth
             .Post(GetFixture("oauth-token"))
@@ -211,6 +214,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Get("", HttpStatusCode.Unauthorized) // access token rejected
             .Post(GetFixture("renew-token")) // refresh succeeds
             .Get(GetFixture("identities"))
@@ -230,6 +234,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = new MemoryStorage();
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Post(GetFixture("oauth-login"))
             .Post(GetFixture("oauth-token"))
             .Get(GetFixture("identities"))
@@ -249,6 +254,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = new MemoryStorage();
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Post(GetFixture("oauth-login"))
             .Post(GetFixture("oauth-token"))
             .Get(GetFixture("identities"))
@@ -268,6 +274,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: false, refreshTokenValid: false);
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Post(GetFixture("oauth-login"))
             .Post(GetFixture("oauth-token"))
             .Get(GetFixture("identities"))
@@ -286,7 +293,9 @@ public class ClientTest : TestBase
     {
         // Arrange
         var storage = new MemoryStorage();
-        var flow = new RestFlow { UseSystemJson = true }.Post(GetFixture("oauth-login"));
+        var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
+            .Post(GetFixture("oauth-login"));
 
         // Act/Assert
         await Should.ThrowAsync<CanceledMultiFactorException>(
@@ -300,6 +309,7 @@ public class ClientTest : TestBase
         // Arrange
         var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
         var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
             .Get("", HttpStatusCode.Unauthorized) // access token rejected
             .Post("", HttpStatusCode.Unauthorized) // refresh also fails (throws TokenExpiredException)
             .Post(GetFixture("oauth-login")) // full OAuth
@@ -313,6 +323,51 @@ public class ClientTest : TestBase
 
         // Assert
         vault.Accounts.Length.ShouldBe(6);
+    }
+
+    //
+    // GetApiBase
+    //
+
+    [Theory]
+    [InlineData("us", "https://api.nordpass.com")]
+    [InlineData("eu", "https://api.eu.nordpass.com")]
+    [InlineData("unknown", "https://api.nordpass.com")]
+    public void GetApiBase_returns_correct_base_for_region(string region, string expected)
+    {
+        // Act/Assert
+        Client.GetApiBase(region).ShouldBe(expected);
+    }
+
+    //
+    // FetchOAuthProviders
+    //
+
+    [Fact]
+    public async Task FetchOAuthProviders_returns_parsed_response()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers"))
+            .ExpectUrl("v1/users/oauth/providers")
+            .ExpectUrl("email=test%40example.com");
+
+        // Act
+        var providers = await Client.FetchOAuthProviders(Email, rest, CancellationToken.None);
+
+        // Assert
+        providers.Provider.ShouldBe("nord_account");
+        providers.Region.ShouldBe("us");
+    }
+
+    [Fact]
+    public async Task FetchOAuthProviders_throws_on_http_error()
+    {
+        // Arrange
+        var rest = new RestFlow { UseSystemJson = true }.Get("", HttpStatusCode.InternalServerError);
+
+        // Act/Assert
+        await Should.ThrowAsync<InternalErrorException>(() => Client.FetchOAuthProviders(Email, rest, CancellationToken.None));
     }
 
     //
