@@ -153,8 +153,9 @@ static class Program
         try
         {
             var cts = new CancellationTokenSource();
+            var storage = new MultiUserPlainStorage(new PlainStorage(), config["username"]);
             var vault = await Client
-                .OpenVault(config["username"], config["master-password"], new BrowserUi(), new PlainStorage(), cts.Token)
+                .OpenVault(config["username"], config["master-password"], new BrowserUi(), storage, cts.Token)
                 .ConfigureAwait(false);
 
             for (var i = 0; i < vault.Accounts.Length; ++i)

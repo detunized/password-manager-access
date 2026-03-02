@@ -41,7 +41,9 @@ public partial class MainWindow : Window, IAsyncUi
         try
         {
             using var cts = new CancellationTokenSource();
-            var vault = await Client.OpenVault(UsernameBox.Text ?? "", PasswordBox.Text ?? "", this, new PlainStorage(), cts.Token);
+            var username = UsernameBox.Text ?? "";
+            var storage = new MultiUserPlainStorage(new PlainStorage(), username);
+            var vault = await Client.OpenVault(username, PasswordBox.Text ?? "", this, storage, cts.Token);
 
             StatusText.Text = $"Got {vault.Accounts.Length} accounts";
         }
