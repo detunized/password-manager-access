@@ -123,6 +123,19 @@ internal static class Model
 
         [JsonPropertyName("item_key")]
         public required ItemKey ItemKey { get; init; }
+
+        // SplitSecret (v1.1.0+): secret is stored separately from the main value
+        [JsonPropertyName("secret")]
+        public string? EncryptedSecret { get; init; }
+
+        [JsonPropertyName("encrypted_secret_key")]
+        public string? EncryptedSecretKey { get; init; }
+
+        [JsonPropertyName("secret_public_key")]
+        public string? SecretPublicKey { get; init; }
+
+        [JsonPropertyName("version")]
+        public string? Version { get; init; }
     }
 
     public record ItemKey
@@ -138,6 +151,10 @@ internal static class Model
 
         [JsonPropertyName("folder_id")]
         public string? FolderId { get; init; }
+
+        // SplitSecret (v1.1.0+): separate key pair for the secret
+        [JsonPropertyName("encrypted_secret_private_key")]
+        public string? EncryptedSecretPrivateKey { get; init; }
     }
 
     // API error response for checking error codes

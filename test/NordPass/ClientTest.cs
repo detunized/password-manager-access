@@ -590,6 +590,109 @@ public class ClientTest : TestBase
     }
 
     //
+    // Business account (SplitSecret v1.1.0)
+    //
+
+    [Fact]
+    public void DecryptVault_decrypts_business_account_with_split_secrets()
+    {
+        // Arrange
+        var fixture = JsonSerializer.Deserialize<Model.Vault>(GetFixture("vault-business"))!;
+
+        // Act
+        var vault = Client.DecryptVault(BusinessMasterPassword, fixture.Identities[0].Keys[0], fixture.VaultItems);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+
+        var minimal = vault.Accounts.First(a => a.Name == "Minimal Entry");
+        minimal.Username.ShouldBe("minuser");
+        minimal.Password.ShouldBe("minpass123");
+        minimal.Url.ShouldBe("https://minimal.example.com");
+        minimal.Folder.ShouldBe("Organization user vault");
+
+        var blah = vault.Accounts.First(a => a.Name == "Blah!!!");
+        blah.Username.ShouldBe("blah");
+        blah.Password.ShouldBe("blah blah");
+        blah.Url.ShouldBe("https://blah.com");
+        blah.Note.ShouldBe("blah blah blah");
+        blah.Folder.ShouldBe("Foder/with/slashes\\and\\back\\slashes~!@#$%^&*()_` ?");
+    }
+
+    [Fact]
+    public void DecryptVault_business_account_decrypts_passwords_via_secret_chain()
+    {
+        // Arrange
+        var fixture = JsonSerializer.Deserialize<Model.Vault>(GetFixture("vault-business"))!;
+
+        // Act
+        var vault = Client.DecryptVault(BusinessMasterPassword, fixture.Identities[0].Keys[0], fixture.VaultItems);
+
+        // Assert
+        var amazon = vault.Accounts.First(a => a.Name == "Amazon");
+        amazon.Username.ShouldBe("john.doe@gmail.com");
+        amazon.Password.ShouldBe("Amaz0n$hopping#1");
+        amazon.Note.ShouldBe("Personal shopping account");
+        amazon.Urls.ShouldBe(["https://www.amazon.com/ap/signin", "https://www.amazon.co.uk", "https://www.amazon.com/orders"]);
+        amazon.Folder.ShouldBe("Shopping");
+        amazon.CustomFields.Length.ShouldBe(2);
+        amazon.CustomFields[0].ShouldBe(new CustomField("Prime Member ID", "AMZ-PRIME-4829301"));
+        amazon.CustomFields[1].ShouldBe(new CustomField("Membership Renewal", "Sunday, March 15, 2026"));
+    }
+
+    [Fact]
+    public void DecryptVault_business_account_decrypts_nested_folder_items()
+    {
+        // Arrange
+        var fixture = JsonSerializer.Deserialize<Model.Vault>(GetFixture("vault-business"))!;
+
+        // Act
+        var vault = Client.DecryptVault(BusinessMasterPassword, fixture.Identities[0].Keys[0], fixture.VaultItems);
+
+        // Assert
+        var github = vault.Accounts.First(a => a.Name == "GitHub");
+        github.Username.ShouldBe("testuser@example.com");
+        github.Password.ShouldBe("S3cureP@ss!2024");
+        github.Note.ShouldBe("Work account for development");
+        github.Folder.ShouldBe("Development");
+        github.Urls.ShouldBe(["https://github.com/login", "https://gist.github.com", "https://github.com/settings/profile"]);
+        github.CustomFields.Length.ShouldBe(3);
+        github.CustomFields[0].ShouldBe(new CustomField("Organization", "acme-corp-dev"));
+        github.CustomFields[1].ShouldBe(new CustomField("API Token", "ghp_xK2mN8pQrT5vW9yZ3aB6cE1fH4jL7"));
+        github.CustomFields[2].ShouldBe(new CustomField("Token Expiry", "Thursday, April 30, 2026"));
+
+        var bank = vault.Accounts.First(a => a.Name == "Bank of Test");
+        bank.Password.ShouldBe("B@nk1ng$ecure99!");
+        bank.Note.ShouldBe("Main checking account - DO NOT SHARE");
+        bank.Folder.ShouldBe("Finance");
+
+        var netflix = vault.Accounts.First(a => a.Name == "Netflix");
+        netflix.Password.ShouldBe("N3tfl1x&Chill!");
+        netflix.Note.ShouldBe("Family plan - 4 screens");
+        netflix.Folder.ShouldBe("Entertainment");
+    }
+
+    [Fact]
+    public async Task OpenVault_business_account_with_valid_access_token()
+    {
+        // Arrange
+        var storage = await MakeStorageWithAuth(accessTokenValid: true, refreshTokenValid: true);
+        var flow = new RestFlow { UseSystemJson = true }
+            .Get(GetFixture("providers-business"))
+            .Get(GetFixture("identities-business"))
+            .Get(GetFixture("vault-items-business-page-1"))
+            .Get(GetFixture("vault-items-business-page-2"));
+
+        // Act
+        var vault = await Client.OpenVault(BusinessEmail, BusinessMasterPassword, new SuccessUi(), storage, flow, CancellationToken.None);
+
+        // Assert
+        vault.Accounts.Length.ShouldBe(6);
+        vault.Accounts.First(a => a.Name == "Minimal Entry").Password.ShouldBe("minpass123");
+        vault.Accounts.First(a => a.Name == "Amazon").Password.ShouldBe("Amaz0n$hopping#1");
+    }
+
+    //
     // Helpers
     //
 
@@ -654,4 +757,9 @@ public class ClientTest : TestBase
     // "Blah!" encrypted item value
     private const string EncryptedItemValue =
         "VlrzZe9eMuWhJ1JfNly3nP4MIrQ7qwRLRnKHi/QRg4OnpAfWMVnGjofe/3Dw9/PS09S6E/vUaMo/zecBevK3/z2/9RnI85a19qHOD0joZZ6N1LHmMxouFr+oYG2r/T8UITjojp4R0iVuWadwH07hWC/TfjfWMgbs3sXzw0V9bzFEgUVkmabx5aLcrddhYZIXQpGDVr0mui6mvdpguAZd7wXH03Svmztq45akcsqzCa1CvtZ8Oy/6oltkkrxhnaCThR8kbdVlzNgxVO55P3KImkJuzplNSpXMsYvXszFO2UCwlq3e9inSbWIICskDAwtxjvr3tRCdCkSjBG8u4VjZYee2gTl5v8rRTI06GRU06gx6f6bKYywGRQDpRNPr4q7GWPPZ0ZgMqKag9pPsHMoSqa38i8D4B2gonkfecm2dhh7DGLduF5qIvpsOQcuXB80t9n/320gnqsu3Cyy+Jb+AHx605pGzQtKCX6uX1by9AchWMcy4QnWKtHKRFA3Ge8MU0gdp9RFDktER8dkpPOlXW70=";
+
+    // Business account
+    private const string BusinessEmail = "lastpass.ruby+27-february-2026@gmail.com";
+    private const string BusinessMasterPassword = "what's a master password?";
+    private const string BusinessIdentityId = "014774ba-ebe4-4397-962d-2ea0da8ae41a";
 }

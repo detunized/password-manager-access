@@ -1,0 +1,22 @@
+[
+    {
+        "identity_id": "014774ba-ebe4-4397-962d-2ea0da8ae41a",
+        "user_id": 130128,
+        "has_pending_shares": false,
+        "keys": [
+            {
+                "identity_key_id": "8e62aa34-05d5-4135-bd3e-a17c2e67c812",
+                "public_key": "cEz3v8NjSZUKz9KtJVkjoBS0/dlEwVY1kjpETRUG/JQ=",
+                "encrypted_private_key": "1/BNOWpDbqhFpxGx20iijZuhpAZg4Kg45jJpbcXk9kEjutScvH8zbGPkVOm/O1I9C27oiFY33VbsYIZFly++tsnjyHxddPXrJ3pFgNpnnGUD1CKpzVGzbcSKJazHaJWotM5j64xFPFBZGc+t8g2n+BtCD47Vya43JV6yZZuypu4=",
+                "encrypted_recovery_key": "B+v1vYYRCOvUStGUHODCSloVIW+2v0A472imVLCGXC0lTvvVv/ezTsunZKZFEDnYlERQXs9wcu3zzMruBG8iHLfe6Iqd6hiL7FYC3S5Et92IgaHwtDcvNz/prHCfQmnXJjhzOuatC9dCSdxHp7dEBxT4eRWtSBnjqBICEmcCPNQ=",
+                "private_signature": "yQHqy3KYTzdv6okIo503/kaisn3otI81DwllCJXmk1OtKX80QNJQ5xHujMvro/NZ5Flmf+g96QNmR8bBYCapDQ==",
+                "recovery_signature": "vREfC68QTxJ1DvP4akgXNK84NAvPccxTZTi57siBpRBizBcfDdPAMxcgkp45UWC7AWvs1+G9iX+7RB/9399SBA==",
+                "recovery_set_at": "2026-02-27 21:30:34",
+                "recovery_updated_count": 0,
+                "salt": "HLxsbgEfZjhKuC/AZV2aXg==",
+                "dek_info": "XChaCha20-Poly1305-IETF",
+                "version": "1.0.0"
+            }
+        ]
+    }
+]

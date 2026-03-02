@@ -140,43 +140,126 @@ public static class Client
         return DecryptVault(masterPassword, identity.Keys[0], items);
     }
 
-    internal record DecryptedFolder(string Id, string Name, byte[] Public, byte[] Private);
-
     internal static Vault DecryptVault(string masterPassword, Model.IdentityKey identityKey, Model.VaultItem[] items)
     {
-        var salt = identityKey.Salt.Decode64();
-        var masterKey = Crypto.DeriveKey(masterPassword, salt);
+        // Prepare the keys
+        var masterKey = Crypto.DeriveKey(masterPassword, identityKey.Salt.Decode64());
         var (x25519Public, x25519Private) = DecryptIdentityX25519KeyPair(masterKey, identityKey.EncryptedPrivateKey.Decode64());
 
-        // Decrypt folder keys and names (items inside folders are sealed with the folder's key)
-        var folders = items
-            .Where(i => i.Type == "folder")
-            .Select(i =>
-            {
-                var (publicKey, privateKey) = DecryptItemX25519KeyPair(x25519Public, x25519Private, i.ItemKey.EncryptedItemPrivateKey.Decode64());
-                var name = DecryptFolderName(publicKey, privateKey, i);
-                return new DecryptedFolder(i.ItemId, name, publicKey, privateKey);
-            })
-            .ToDictionary(x => x.Id);
-
-        var accounts = items
-            .Where(i => i.Type == "item")
-            .Select(i =>
-            {
-                var publicKey = x25519Public;
-                var privateKey = x25519Private;
-                if (folders.TryGetValue(i.ItemKey.FolderId ?? "", out var folder))
-                {
-                    publicKey = folder.Public;
-                    privateKey = folder.Private;
-                }
-                return DecryptVaultItem(publicKey, privateKey, i, folder?.Name ?? "");
-            })
-            .Where(a => a != null)
-            .ToArray();
+        // Folders are needed to decrypt items
+        var folders = DecryptFolders(x25519Public, x25519Private, items);
+        var accounts = DecryptItems(x25519Public, x25519Private, folders, items);
 
         return new Vault(accounts);
     }
+
+    internal record DecryptedFolder(string Name, byte[] Public, byte[] Private, byte[]? SecretPublic, byte[]? SecretPrivate);
+
+    internal static Dictionary<string, DecryptedFolder> DecryptFolders(
+        byte[] identityX25519Public,
+        byte[] identityX25519Private,
+        Model.VaultItem[] items
+    )
+    {
+        var folderItems = items.Where(i => i.Type == "folder").ToArray();
+        var folders = new Dictionary<string, DecryptedFolder>();
+
+        // Process folders in dependency order: root folders first (no parent), then nested
+        var remaining = new List<Model.VaultItem>(folderItems);
+        var previousCount = -1;
+        while (remaining.Count > 0 && remaining.Count != previousCount)
+        {
+            previousCount = remaining.Count;
+
+            // Start from the back to safely remove items while iterating
+            for (var i = remaining.Count - 1; i >= 0; i--)
+            {
+                var item = remaining[i];
+
+                // If parents keys are not yet available leave this folder for now, we'll get back to it later.
+                if (!TryResolveParentKeys(item, folders, identityX25519Public, identityX25519Private, out var parentKeys))
+                    continue;
+
+                var (folderPublic, folderPrivate) = DecryptItemX25519KeyPair(
+                    parentKeys.Public,
+                    parentKeys.Private,
+                    item.ItemKey.EncryptedItemPrivateKey.Decode64()
+                );
+                var name = DecryptFolderName(folderPublic, folderPrivate, item);
+
+                // SplitSecret (v1.1.0+): folders have a parallel secret key pair
+                byte[]? secretPublic = null;
+                byte[]? secretPrivate = null;
+                if (item.ItemKey.EncryptedSecretPrivateKey != null)
+                    (secretPublic, secretPrivate) = DecryptItemX25519KeyPair(
+                        parentKeys.SecretPublic,
+                        parentKeys.SecretPrivate,
+                        item.ItemKey.EncryptedSecretPrivateKey.Decode64()
+                    );
+
+                folders[item.ItemId] = new DecryptedFolder(name, folderPublic, folderPrivate, secretPublic, secretPrivate);
+                remaining.RemoveAt(i);
+            }
+        }
+
+        // TODO: Do we need to allow skipping folders that we cannot decrypt? It's tricky, because this could either mean that we have a bug
+        //       or that there's something shared with us, we don't have access to. This needs to be investigated. For now we assume we should
+        //       be able to decrypt all folders.
+        if (remaining.Count > 0)
+            throw new InternalErrorException($"Failed to resolve folder key chain for {remaining.Count} folder(s)");
+
+        return folders;
+    }
+
+    internal record ParentKeys(byte[] Public, byte[] Private, byte[] SecretPublic, byte[] SecretPrivate);
+
+    // Returns false when the parent folder hasn't been decrypted yet (used by DecryptFolders to defer).
+    internal static bool TryResolveParentKeys(
+        Model.VaultItem item,
+        Dictionary<string, DecryptedFolder> folders,
+        byte[] identityX25519Public,
+        byte[] identityX25519Private,
+        out ParentKeys keys
+    )
+    {
+        var parentId = item.ItemKey.FolderId;
+        if (parentId == null)
+        {
+            keys = new ParentKeys(identityX25519Public, identityX25519Private, identityX25519Public, identityX25519Private);
+            return true;
+        }
+
+        if (!folders.TryGetValue(parentId, out var folder))
+        {
+            keys = null!;
+            return false;
+        }
+
+        keys = new ParentKeys(
+            folder.Public,
+            folder.Private,
+            folder.SecretPublic ?? identityX25519Public,
+            folder.SecretPrivate ?? identityX25519Private
+        );
+        return true;
+    }
+
+    internal static Account?[] DecryptItems(
+        byte[] identityX25519Public,
+        byte[] identityX25519Private,
+        Dictionary<string, DecryptedFolder> folders,
+        Model.VaultItem[] items
+    ) =>
+        items
+            .Where(i => i.Type == "item")
+            .Select(i =>
+            {
+                var folderName = folders.GetValueOrDefault(i.ItemKey.FolderId ?? "")?.Name ?? "";
+                TryResolveParentKeys(i, folders, identityX25519Public, identityX25519Private, out var keys);
+                return DecryptVaultItem(keys!.Public, keys.Private, keys.SecretPublic, keys.SecretPrivate, i, folderName);
+            })
+            .Where(a => a != null)
+            .ToArray();
 
     internal static readonly Dictionary<string, string> DefaultHeaders = new() { ["nordpass-user-agent"] = "NordPass webvault (7.3.14) webvault" };
 
@@ -371,7 +454,7 @@ public static class Client
         while (true)
         {
             var response = await rest.GetAsync<Model.VaultItemsResponse>(
-                    $"v2/users/identities/items?identity_id={identityId}&type%5B%5D=item&type%5B%5D=folder&type%5B%5D=option&page={page}",
+                    $"v2/users/identities/items?identity_id={identityId}&type%5B%5D=item&type%5B%5D=folder&type%5B%5D=option&with_secrets=true&page={page}",
                     cancellationToken
                 )
                 .ConfigureAwait(false);
@@ -394,14 +477,21 @@ public static class Client
     //
 
     // Decrypts a vault item through the full chain: item key → value key → value → Account.
-    // The identity X25519 keys must be pre-derived from the identity Ed25519 keypair.
+    // The parent X25519 keys are the identity keys (for root items) or the folder keys (for items in folders).
     // Only items of type "password" are parsed, other types are ignored (return null).
-    internal static Account? DecryptVaultItem(byte[] identityX25519PublicKey, byte[] identityX25519PrivateKey, Model.VaultItem item, string folder)
+    internal static Account? DecryptVaultItem(
+        byte[] parentX25519PublicKey,
+        byte[] parentX25519PrivateKey,
+        byte[] parentSecretX25519PublicKey,
+        byte[] parentSecretX25519PrivateKey,
+        Model.VaultItem item,
+        string folder
+    )
     {
-        // 1. Decrypt item key (sealed box with identity X25519)
+        // 1. Decrypt item key (sealed box with parent X25519)
         var (itemX25519Public, itemX25519Private) = DecryptItemX25519KeyPair(
-            identityX25519PublicKey,
-            identityX25519PrivateKey,
+            parentX25519PublicKey,
+            parentX25519PrivateKey,
             item.ItemKey.EncryptedItemPrivateKey.Decode64()
         );
 
@@ -425,20 +515,61 @@ public static class Client
             JsonSerializer.Deserialize<Model.DecryptedPassword>(wrapper.Value)
             ?? throw new InternalErrorException("Failed to parse decrypted password value");
 
-        // 6. Map to Account
+        // 6. For SplitSecret items (v1.1.0+), the secret/note are stored separately and need to be decrypted via the secret keychain.
+        var secret = parsed.Secret;
+        var note = parsed.Note;
+        var customFields = parsed.CustomFields;
+        if (item.EncryptedSecret != null && item.ItemKey.EncryptedSecretPrivateKey != null)
+        {
+            var secretParsed = DecryptSplitSecret(parentSecretX25519PublicKey, parentSecretX25519PrivateKey, item);
+            if (secretParsed != null)
+            {
+                secret ??= secretParsed.Secret;
+                note ??= secretParsed.Note;
+                customFields ??= secretParsed.CustomFields;
+            }
+        }
+
+        // 7. Map to Account
         var urls = new[] { parsed.Url }.Concat(parsed.AdditionalUrls ?? []).Where(u => !u.IsNullOrEmpty()).ToArray();
-        var customFields = parsed.CustomFields?.Select(ParseCustomField).ToArray() ?? [];
+        var mappedCustomFields = customFields?.Select(ParseCustomField).ToArray() ?? [];
 
         return new Account(
             Id: item.ItemId,
             Name: parsed.Title ?? "",
             Username: parsed.Username ?? "",
-            Password: parsed.Secret ?? "",
+            Password: secret ?? "",
             Urls: urls,
-            Note: parsed.Note ?? "",
+            Note: note ?? "",
             Folder: folder,
-            CustomFields: customFields
+            CustomFields: mappedCustomFields
         );
+    }
+
+    // Decrypts the separate secret for SplitSecret (v1.1.0+) items.
+    // The secret private key is sealed with the parent's SECRET key pair (folder secret key or identity key).
+    // This is a parallel chain to the regular item keychain.
+    // Chain: parent secret key → item secret key pair → secret value key → secret value
+    internal static Model.DecryptedPassword? DecryptSplitSecret(
+        byte[] parentSecretX25519PublicKey,
+        byte[] parentSecretX25519PrivateKey,
+        Model.VaultItem item
+    )
+    {
+        // 1. Decrypt secret key pair (sealed box with parent's secret X25519)
+        var (secretX25519Public, secretX25519Private) = DecryptItemX25519KeyPair(
+            parentSecretX25519PublicKey,
+            parentSecretX25519PrivateKey,
+            item.ItemKey.EncryptedSecretPrivateKey!.Decode64()
+        );
+
+        // 2. Decrypt secret value key (sealed box with secret X25519)
+        var secretKey = DecryptValueKey(secretX25519Public, secretX25519Private, item.EncryptedSecretKey!.Decode64());
+
+        // 3. Decrypt the secret value (XChaCha20 with secret key)
+        var secretJson = DecryptItemValue(secretKey, item.EncryptedSecret!.Decode64());
+
+        return JsonSerializer.Deserialize<Model.DecryptedPassword>(secretJson);
     }
 
     internal static CustomField ParseCustomField(Model.DecryptedCustomField field) =>
