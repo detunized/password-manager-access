@@ -519,7 +519,7 @@ public static class Client
         var secret = parsed.Secret;
         var note = parsed.Note;
         var customFields = parsed.CustomFields;
-        if (item.EncryptedSecret != null && item.ItemKey.EncryptedSecretPrivateKey != null)
+        if (item.EncryptedSecret != null && item.EncryptedSecretKey != null && item.ItemKey.EncryptedSecretPrivateKey != null)
         {
             var secretParsed = DecryptSplitSecret(parentSecretX25519PublicKey, parentSecretX25519PrivateKey, item);
             if (secretParsed != null)
