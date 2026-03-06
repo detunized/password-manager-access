@@ -220,7 +220,9 @@ namespace PasswordManagerAccess.LastPass
 
         public static RSAParameters ParseEncryptedPrivateKey(string encryptedPrivateKey, byte[] encryptionKey)
         {
-            var decrypted = Util.DecryptAes256(encryptedPrivateKey.DecodeHex(), encryptionKey, CipherMode.CBC, encryptionKey.Take(16).ToArray());
+            var decrypted = encryptedPrivateKey.StartsWith("!")
+                ? Util.DecryptAes256CbcBase64(encryptedPrivateKey.ToBytes(), encryptionKey)
+                : Util.DecryptAes256(encryptedPrivateKey.DecodeHex(), encryptionKey, CipherMode.CBC, encryptionKey.Take(16).ToArray());
 
             const string header = "LastPassPrivateKey<";
             const string footer = ">LastPassPrivateKey";

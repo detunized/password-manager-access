@@ -87,6 +87,17 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void ExtractChunks_parses_new_format_blob()
+        {
+            NewFormatBlob.Open(reader =>
+            {
+                var chunks = Parser.ExtractChunks(reader);
+                Assert.True(chunks.Count > 0);
+                Assert.Equal("ENDM", chunks.Last().Id);
+            });
+        }
+
+        [Fact]
         public void ParseEncryptedPrivateKey_throws_on_invalid_chunk()
         {
             Exceptions.AssertThrowsInternalError(() => Parser.ParseEncryptedPrivateKey("", TestData.EncryptionKey), "Failed to decrypt private key");
@@ -332,5 +343,6 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private string BlobBase64 => GetFixture("blob-base64", "txt");
         private byte[] Blob => BlobBase64.Decode64();
+        private byte[] NewFormatBlob => GetFixture("blob-base64-new-format", "txt").Decode64();
     }
 }

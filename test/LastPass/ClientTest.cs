@@ -1374,7 +1374,7 @@ namespace PasswordManagerAccess.Test.LastPass
             var accounts = Client.ParseVault(blob, TestData.NewFormatEncryptionKey, privateKey, ParserOptions.Default);
 
             // Assert
-            accounts.Length.ShouldBeGreaterThan(0);
+            accounts.Length.ShouldBe(1);
         }
 
         [Theory]
