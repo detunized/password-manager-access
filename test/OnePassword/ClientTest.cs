@@ -25,7 +25,7 @@ using Xunit;
 
 namespace PasswordManagerAccess.Test.OnePassword
 {
-    public class ClientTest : TestBase
+    public partial class ClientTest : TestBase
     {
         //
         // Public methods
@@ -1032,13 +1032,14 @@ namespace PasswordManagerAccess.Test.OnePassword
         //       or exposing its credentials, but I don't want to have inconsistent test data.
         //       Everything should be either re-encrypted or somehow harmonized across all the tests
         //       to use the same username, password and account key.
-        private static readonly Credentials Credentials = new Credentials
-        {
-            Username = "detunized@gmail.com",
-            Password = "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
-            AccountKey = "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
-            DeviceUuid = "rz64r4uhyvgew672nm4ncaqonq",
-            Domain = "my.1password.com",
-        };
+        private static readonly Credentials Credentials =
+            new()
+            {
+                Username = "detunized@gmail.com",
+                Password = "Dk%hnM9q2xLY5z6Pe#t&Wutt8L&^W!sz",
+                AccountKey = "A3-FRN8GF-RBDFX9-6PFY4-6A5E5-457F5-999GY",
+                DeviceUuid = "rz64r4uhyvgew672nm4ncaqonq",
+                Domain = "my.1password.com",
+            };
     }
 }

@@ -174,11 +174,12 @@ namespace PasswordManagerAccess.OnePassword
             CancellationToken cancellationToken
         )
         {
+            var defaultRest = MakeRestClient(transport, GetApiUrl(DefaultDomain));
+            if (await IsSsoAccount(credentials.Username, defaultRest, cancellationToken).ConfigureAwait(false))
+                return await SsoLogIn(credentials, app, ui, storage, defaultRest, cancellationToken).ConfigureAwait(false);
+
             var rest = MakeRestClient(transport, GetApiUrl(credentials.Domain));
-            var isSso = await IsSsoAccount(credentials.Username, rest, cancellationToken).ConfigureAwait(false);
-            return isSso
-                ? await SsoLogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false)
-                : await LogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
+            return await LogIn(credentials, app, ui, storage, rest, cancellationToken).ConfigureAwait(false);
         }
 
         internal static Credentials ParseServiceAccountToken(string token)
