@@ -16,14 +16,15 @@ namespace PasswordManagerAccess.Test.OnePassword
         public const string AppName = "app-name";
         public const string AppVersion = "app-version";
 
-        public static readonly Credentials Credentials = new Credentials
-        {
-            Username = Username,
-            Password = Password,
-            AccountKey = AccountKey,
-            Domain = Domain,
-            DeviceUuid = DeviceUuid,
-        };
+        public static readonly Credentials Credentials =
+            new()
+            {
+                Username = Username,
+                Password = Password,
+                AccountKey = AccountKey,
+                Domain = Domain,
+                DeviceUuid = DeviceUuid,
+            };
 
         public static readonly AppInfo AppInfo = new AppInfo { Name = AppName, Version = AppVersion };
 
