@@ -1,5 +1,9 @@
 # Changelog
 
+## 31.0.2
+  - LastPass: added support for base64-encoded encrypted private key
+  - 1Password: fixed SSO account detection to always use the default domain
+
 ## 31.0.1
   - Duo: fixed a crash in Duo v4 when the server response is missing device data
 
