@@ -10,7 +10,8 @@ Run both after every task to verify.
 # Code Style
 
 - Use file-scoped namespaces in C#
-- Use `// Arrange`, `// Act`, `// Assert` comments in tests
+- All new files should have `#nullable enable`
+- Use `// Arrange`, `// Act`, `// Assert` comments in tests to group sections of code
 
 # Git Conventions
 
