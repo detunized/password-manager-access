@@ -1363,6 +1363,20 @@ namespace PasswordManagerAccess.Test.LastPass
             }
         }
 
+        [Fact]
+        public void ParseVault_parses_new_format_blob()
+        {
+            // Arrange
+            var blob = NewFormatBlobBase64.Decode64();
+            var privateKey = Parser.ParseEncryptedPrivateKey(TestData.NewFormatEncryptedPrivateKey, TestData.NewFormatEncryptionKey);
+
+            // Act
+            var accounts = Client.ParseVault(blob, TestData.NewFormatEncryptionKey, privateKey, ParserOptions.Default);
+
+            // Assert
+            accounts.Length.ShouldBeGreaterThan(0);
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(2)]
@@ -1533,6 +1547,7 @@ namespace PasswordManagerAccess.Test.LastPass
 
         private string BlobBase64 => GetFixture("blob-base64", "txt");
         private byte[] Blob => BlobBase64.Decode64();
+        private string NewFormatBlobBase64 => GetFixture("blob-base64-new-format", "txt");
 
         private const string BaseUrl = "https://lastpass.com";
         private const string AlternativeBaseUrl = "https://lastpass.eu";

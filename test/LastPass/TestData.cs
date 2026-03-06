@@ -148,6 +148,39 @@ namespace PasswordManagerAccess.Test.LastPass
             Q = RsaQ,
         };
 
+        public static readonly byte[] NewFormatEncryptionKey = "y58Y/422KKmWyHaFzQT19qwt7AeaSYMhHQgTsOI8aSs=".Decode64();
+
+        public const string NewFormatEncryptedPrivateKey =
+            "!oMLERmBIGFgkz1DO02i7jQ==|7KojODOMEvOyq1b79bojK7XMSzfOtpgKOIUG4AEgNtJn781PZWEGE3evxvNmxiSBKKuEaRnS6NMqS+HNFD49KHfafd"
+            + "MJd1r8XQCnj6xL3hsxzgtgWLmTG8kmNXBMBVHspeU62f86YVXlWU3GQV8OCMtV8rttMTdF3uRa7V2s88FPL5JfbpcZzpkQaIer6hhTzAUMDA1EEv6peQ3"
+            + "bQEyN1b8Qk2cSOZ9sGwXdcT1FnOO2m8o5+fXHlWexTXJHcT4TF2JQtFtdXj+YX0oec3OPUirpuAMteCEj8PZIcib6MJmvrvo9fMoo8YaxvskzyzaN8Rk0l"
+            + "ae+3nCCjgKmFQXiyR999iW5wuukmbDrz7scirDgSHgDeSS/c5MJPEd6LVDFf2s9rr/wXGnM079oD0Yk6AiZgDcqHf4crf5DX9943STtWbAdzLz7n60gZ3D"
+            + "FG/laWgK1zusK0utPJXcliaxVFPDo0rlelC9u95lftkjORUz8a0qwf1x7pBm03T3L2Y3fHEQLFk8mMUeQWqPctKou62Od/mB6xBDZny3HfFTZuF8D98DJiz"
+            + "uyAlH1WpkRcQwaasyy8UfOSGFcU4f2UsbPOaeNA4L7XwjGgtX1aUqJvg26SmR/Fwnwgiu0/c6XOUgB0KVt83ki2zqEBglNOqa8BwpqteLFDLltsu/Zah+fa"
+            + "BXmZ+RuSBHIC00Lyt2aAs9fCVmKsuqJKA7bNqmX06F3Mm7E9DzZ7IwJvIK9AH+UfuvO0UrekrecvEL6ZR+WUa1vof/+Fkae+MZ4osOfhYqzQ7WU9snjm/m"
+            + "CwNs57ezHxuUcUm8a6SJLmF/P+kZ/+31bBVaIZ06GMs4H1MaDqb60/slxcEAB59Immjn4+k29c0q3uWeD9XG/Ygln7nqCFbxTBrNFGGSaNSbqMajKncsXA"
+            + "3H+F/6SK/FKClf8IDreI8TvxG0a9PLSQYJHzZnz+VuByeuf8PLFWRKrdnNxa2T7T6D10bl4oP269KOwEeJSPVau+WCAiwUl6w0TwnDY0aUVaK+ZWO3HGmvx"
+            + "ket9pgCIKllNXJ/QIgzTH3oY+oVr45hK4Kw/XsOxWcDlw8eruSeAQFA8DXjtQFr+6NbeZXEM8GQcv4WjkgZQ3Yy6OD0HQf/FqrSrwjbnYfIUg2V5p+neOw"
+            + "oHVplgHERU6pqEk6qCuv6880A+Hn88wkNfNlW0rofMVn5k6yhOTMtfj9mXz7ScLF8wLVcUHJo4HTsAeb3picMJ9ts7YkCIAOak6mWwZieApVO7km4iwv5bf"
+            + "vbRoXJrut81EcJNKYlkCuXxgw2AmsxFS7ZN/lr8cYc7Kxkohye8xoUVMnYG4LZA7snPjAdHOHppTtRapIAwCMpVZC/d4mpy6UcNQiHzTZtdfiN0JLfHJvL6"
+            + "LNFlgULm5q7Yj7Dlehlo+FammtDJiBa/Z0IJCkoKFLJLAeMV8y86y9+YQEM59vwbNcysQjm8Q89s7thRMzNvrzRsmjkbH2eEK3GZ/K1KAianpsrjimBXP9h"
+            + "29mvVeHw5zGav7kcYB8CcddCw99OD3nPprGb1dzYrRmDvl1GNUdpgejtL8YVO5l+towiZX9hZxehih8GJ9y25eJ8FXDmawsQoer0r3+bYvdl78jC0P2pq6Ia"
+            + "ccaW3RwDjVDy1Ubaay9MTlTXJs1XIkVF4PJsq/H0TkxTp1OPTLW1YiZlEIYHYmclKjrjo35PtdAipL99VEAgr1JH/Etp/DOEPqPDx9mza5DbB3K2DCyilQn"
+            + "FA5pfkMm7Pv3UCXDwT6MJRvtwDN2lj13vTypZNRjTjI/E3EhAoqKGKZX7v+0IZBEFatBjFJapUU1nJNxkwnsF7aDE7A8JkQxk5q1FEwsjyYfXPGJzAHczrD"
+            + "zmtMXkSxQyHtfcZrv2umvN7EwBzkEkRmRTOsu+rCzmVsqkpvu/Tlsu5z3MLab7D68Yz9zXKbHxvwKEgd1mJs/33OZoJJX5dFt65u7pXT7p318TQCYTaQikZH"
+            + "xDQomBUKkCnNM0Ylwun1hiWXUfXH6IGs7Sts2XoL3UKOUP+ekN9QAigmVhV0zZNshQ1VPzoTubvk4Nxa1LWo20TsAK0hBV6aIJdvZukxUJlnDLHcywcn2jl"
+            + "4AIr+gVO8Q7K+tnDU4hsnZNXmGjBeP/x07/xIj/lAosvxfGN8r3WMAK49xQ8VXxIqnuA/Quw2+MHduJF5yh0oH4oye868LqLWrrJjD3zN5HzMwx/ifJrto"
+            + "ctGsX1Kqm7/2NCtUJaAOTKWdD58Gp9zHuS7AJpzN2Z1sQv5Q/fFWn5S0IgPrjZ3Knw58bU26Yh+1wEJXpjlHipt+x6FqRias5HeCD1VXBzrc1+mhirgvXBU"
+            + "0O1zE3IpZCdKlKtS22u7K9BOBI7o378+Lc8c/oaTXgBIauHq0zlzpuHKbt4YxK9b0kC5n1FerEn0lcKS23+8sLSL8uHFiIdJMPqlN9pWOo88hOWt0MmMUfS"
+            + "xtGXS6e7hlnp57LraxA+JnTRetklXSKVfWpR/XxU/Je7DCmsqci8viU2K8du9XoHVqFpNF1pqtxLREmwmDZVCrcx8P6JBKdufbi98bnB0IrVE9n7z2Bn4V6e"
+            + "qQI2HwnWKh+O8IJNuCEyUqhgwGuEleMm8g2w/6US5iQILFmqd+LFGcvuWZBm4pFfuCq6pRDh67feIDcXdRT0kPMRTEXRLTkbY/vwCc91+GVBflkmE93gwTW"
+            + "mTuZSYj6AqGjczkJdfXB0xshy9/3cgc90VwFtQtD2XZmTVs8zbAJtiBf2lAVbxei3bpSUaSc5a4VaFtQFn6ElxjR1oZTa54EoK9eej0JSuVM39cYBPQn7FGi"
+            + "Z78sBpV9My1W3E5wM64OjwjomKObvZsc8o05z8KHg7+n6a7yIsrLAb51o0NQVWCYOldvcLf7ERLBlCGJMBrqvhVH4P5iiJgPOeCQiDxKsH32lZlrAxTOY3Blr"
+            + "niYyOfRfdbbh8uyPvRvppMp+EEc3wku8/gHiyeIOT+wgmbpzgKMtKFY4iXmSDxrSyyvbOYc+rCH4AJ7x3zWnR1bfZ2vCvw4k8Im8+Wz2LyxIFFuAYOSLMGJ"
+            + "YxP7BC1PljTCrUotiSJjDUDmbCISWrqvWq1ScOD5Tu/70PEmcc/CBXVAEgVEsLOX0eIKxVwh7f5NtxOjU6njFRs8lRgLsrBSBps5zYsg8P4Sp25E98iHaAMwI"
+            + "AKVzySDoHsk+A9aJS8yVcTswNC+VaZRNh4fK7zasTsorU6JY/qolinW2i++ENaK/pUcE5k90D6GJg1tJh1H9lh4SxhOc4StlbocsseU8pKs/uoTbvGSBQwW5"
+            + "o0w=";
+
         public class Account
         {
             public Account(string id, string name, string username, string password, string url, string group)

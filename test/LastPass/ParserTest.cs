@@ -77,6 +77,16 @@ namespace PasswordManagerAccess.Test.LastPass
         }
 
         [Fact]
+        public void ParseEncryptedPrivateKey_parses_base64_encoded_key()
+        {
+            var rsa = Parser.ParseEncryptedPrivateKey(TestData.NewFormatEncryptedPrivateKey, TestData.NewFormatEncryptionKey);
+
+            Assert.NotNull(rsa.D);
+            Assert.NotNull(rsa.Exponent);
+            Assert.NotNull(rsa.Modulus);
+        }
+
+        [Fact]
         public void ParseEncryptedPrivateKey_throws_on_invalid_chunk()
         {
             Exceptions.AssertThrowsInternalError(() => Parser.ParseEncryptedPrivateKey("", TestData.EncryptionKey), "Failed to decrypt private key");
